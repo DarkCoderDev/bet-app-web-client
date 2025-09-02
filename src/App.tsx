@@ -8,7 +8,7 @@ import {
     type ColumnFiltersState,
     type FilterFn,
 } from "@tanstack/react-table";
-import { truncate } from "./consts";
+import {truncate} from "./consts";
 
 type Row = string[];
 
@@ -23,6 +23,7 @@ const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): T =
 
 const stripTags = (html: string) =>
     html.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]*>/g, "").trim();
+
 
 const includesText: FilterFn<Row> = (row, columnId, filterValue) => {
     const v = String(row.getValue(columnId) ?? "");
@@ -127,18 +128,48 @@ const getBetResultForCell = (columnId: string, row: Row) => {
 export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) {
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [pageIndex, setPageIndex] = React.useState(0);
-    const [pageSize, setPageSize] = React.useState(34);
+    const [pageSize] = React.useState(30);
 
     // Локальное состояние для полей фильтрации
     const [filterInputs, setFilterInputs] = React.useState<Record<string, string>>({});
-    
 
+    // Batch-система для массовых обновлений фильтров
+    const [isBatching, setIsBatching] = React.useState(false);
+    const batchFilters = React.useRef<Map<string, string>>(new Map());
+    const batchTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Debounced функция для фильтрации
+    // Начать батч
+    const beginBatch = React.useCallback(() => {
+        setIsBatching(true);
+        batchFilters.current.clear();
+    }, []);
+
+    // Завершить батч
+    const endBatch = React.useCallback(() => {
+        setIsBatching(false);
+        
+        if (batchTimeout.current) {
+            clearTimeout(batchTimeout.current);
+        }
+        
+        batchTimeout.current = setTimeout(() => {
+            // Применяем все фильтры из батча
+            const newFilters: ColumnFiltersState = [];
+            batchFilters.current.forEach((value, columnId) => {
+                if (value && value.trim()) {
+                    newFilters.push({ id: columnId, value: value.trim() });
+                }
+            });
+            
+            setColumnFilters(newFilters);
+            batchFilters.current.clear();
+        }, 200);
+    }, []);
+
+    // Debounced функция для фильтрации (для одиночных обновлений)
     const debouncedSetFilter = React.useMemo(
         () => debounce((args: [string, string]) => {
             const [columnId, value] = args;
-            console.log('Debounced filter applied:', columnId, value);
             setColumnFilters(prev => {
                 const newFilters = prev.filter(f => f.id !== columnId);
                 if (value && value.trim()) {
@@ -154,31 +185,26 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     const handleK1Click = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-        
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
-        
+
         // Очищаем поля ввода
         setFilterInputs(prev => {
-            const newInputs = { ...prev };
+            const newInputs = {...prev};
             coefficientColumns.forEach(col => {
                 newInputs[col] = '';
             });
             return newInputs;
         });
-        
+
         // Получаем значения п1, х, п2 из текущей строки
         const p1Value = String(row[6] || ''); // п1 (индекс 6)
         const xValue = String(row[7] || ''); // х (индекс 7)
         const p2Value = String(row[8] || ''); // п2 (индекс 8)
-        
+
         // Применяем truncate с обрезкой сотых (второй аргумент = 1)
         const truncatedP1 = truncate(p1Value, 1);
         const truncatedX = truncate(xValue, 1);
         const truncatedP2 = truncate(p2Value, 1);
-        
+
         // Устанавливаем значения в фильтры
         setFilterInputs(prev => ({
             ...prev,
@@ -186,31 +212,28 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'х': truncatedX,
             'п2': truncatedP2
         }));
-        
-        // Применяем фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-    }, [debouncedSetFilter]);
+
+        // Применяем фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     const handleMathClick = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-        
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
-        
+
         // Очищаем поля ввода
         setFilterInputs(prev => {
-            const newInputs = { ...prev };
+            const newInputs = {...prev};
             coefficientColumns.forEach(col => {
                 newInputs[col] = '';
             });
             return newInputs;
         });
-        
+
         // Получаем все значения коэффициентов из текущей строки
         const p1Value = String(row[6] || ''); // п1 (индекс 6)
         const xValue = String(row[7] || ''); // х (индекс 7)
@@ -225,7 +248,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
         const tm3Value = String(row[16] || ''); // ТМ3 (индекс 16)
         const ozYesValue = String(row[17] || ''); // ОЗ-Да (индекс 17)
         const ozNoValue = String(row[18] || ''); // ОЗ-Нет (индекс 18)
-        
+
         // Применяем truncate с обрезкой после точки (второй аргумент = 0)
         const truncatedP1 = truncate(p1Value, 0);
         const truncatedX = truncate(xValue, 0);
@@ -240,7 +263,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
         const truncatedTm3 = truncate(tm3Value, 0);
         const truncatedOzYes = truncate(ozYesValue, 0);
         const truncatedOzNo = truncate(ozNoValue, 0);
-        
+
         // Устанавливаем значения во все фильтры
         setFilterInputs(prev => ({
             ...prev,
@@ -258,41 +281,38 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'ОЗ-Да': truncatedOzYes,
             'ОЗ-Нет': truncatedOzNo
         }));
-        
-        // Применяем все фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-        debouncedSetFilter(['Ф1(0)', truncatedF10]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['2 заб', truncatedZab2]);
-        debouncedSetFilter(['ТБ2.5', truncatedTb25]);
-        debouncedSetFilter(['ТМ2.5', truncatedTm25]);
-        debouncedSetFilter(['ТБ3', truncatedTb3]);
-        debouncedSetFilter(['ТМ3', truncatedTm3]);
-        debouncedSetFilter(['ОЗ-Да', truncatedOzYes]);
-        debouncedSetFilter(['ОЗ-Нет', truncatedOzNo]);
-    }, [debouncedSetFilter]);
+
+        // Применяем все фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        batchFilters.current.set('Ф1(0)', truncatedF10);
+        batchFilters.current.set('Ф2(0)', truncatedF20);
+        batchFilters.current.set('1 заб', truncatedZab1);
+        batchFilters.current.set('2 заб', truncatedZab2);
+        batchFilters.current.set('ТБ2.5', truncatedTb25);
+        batchFilters.current.set('ТМ2.5', truncatedTm25);
+        batchFilters.current.set('ТБ3', truncatedTb3);
+        batchFilters.current.set('ТМ3', truncatedTm3);
+        batchFilters.current.set('ОЗ-Да', truncatedOzYes);
+        batchFilters.current.set('ОЗ-Нет', truncatedOzNo);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     const handleTotalClick = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-        
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
-        
+
         // Очищаем поля ввода
         setFilterInputs(prev => {
-            const newInputs = { ...prev };
+            const newInputs = {...prev};
             coefficientColumns.forEach(col => {
                 newInputs[col] = '';
             });
             return newInputs;
         });
-        
+
         // Получаем все значения коэффициентов из текущей строки
         const p1Value = String(row[6] || ''); // п1 (индекс 6)
         const xValue = String(row[7] || ''); // х (индекс 7)
@@ -307,13 +327,13 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
         const tm3Value = String(row[16] || ''); // ТМ3 (индекс 16)
         const ozYesValue = String(row[17] || ''); // ОЗ-Да (индекс 17)
         const ozNoValue = String(row[18] || ''); // ОЗ-Нет (индекс 18)
-        
+
         // Применяем смешанную логику обрезки согласно требованиям
         // п1, х, п2 - обрезка после точки (truncate, 0)
         const truncatedP1 = truncate(p1Value, 0);
         const truncatedX = truncate(xValue, 0);
         const truncatedP2 = truncate(p2Value, 0);
-        
+
         // Остальные - обрезка сотых (truncate, 1)
         const truncatedF10 = truncate(f10Value, 1);
         const truncatedF20 = truncate(f20Value, 1);
@@ -325,7 +345,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
         const truncatedTm3 = truncate(tm3Value, 1);
         const truncatedOzYes = truncate(ozYesValue, 1);
         const truncatedOzNo = truncate(ozNoValue, 1);
-        
+
         // Устанавливаем значения во все фильтры
         setFilterInputs(prev => ({
             ...prev,
@@ -343,24 +363,24 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'ОЗ-Да': truncatedOzYes,
             'ОЗ-Нет': truncatedOzNo
         }));
-        
-        // Применяем все фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-        debouncedSetFilter(['Ф1(0)', truncatedF10]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['2 заб', truncatedZab2]);
-        debouncedSetFilter(['ТБ2.5', truncatedTb25]);
-        debouncedSetFilter(['ТМ2.5', truncatedTm25]);
-        debouncedSetFilter(['ТБ3', truncatedTb3]);
-        debouncedSetFilter(['ТМ3', truncatedTm3]);
-        debouncedSetFilter(['ОЗ-Да', truncatedOzYes]);
-        debouncedSetFilter(['ОЗ-Нет', truncatedOzNo]);
-    }, [debouncedSetFilter]);
+
+        // Применяем все фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        batchFilters.current.set('Ф1(0)', truncatedF10);
+        batchFilters.current.set('Ф2(0)', truncatedF20);
+        batchFilters.current.set('1 заб', truncatedZab1);
+        batchFilters.current.set('2 заб', truncatedZab2);
+        batchFilters.current.set('ТБ2.5', truncatedTb25);
+        batchFilters.current.set('ТМ2.5', truncatedTm25);
+        batchFilters.current.set('ТБ3', truncatedTb3);
+        batchFilters.current.set('ТМ3', truncatedTm3);
+        batchFilters.current.set('ОЗ-Да', truncatedOzYes);
+        batchFilters.current.set('ОЗ-Нет', truncatedOzNo);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     // колонки
     const columns = React.useMemo<ColumnDef<Row>[]>(() => {
@@ -393,8 +413,8 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                 header: h,
                 accessorFn: (row) => h === 'Действия' ? '' : row[idx],
                 cell: (ctx) => renderClean(ctx.getValue<string>()),
-                filterFn: includesText,
-            } as ColumnDef<Row> & { filterFn: FilterFn<Row> });
+                filterFn: h === 'Действия' ? undefined : includesText,
+            } as ColumnDef<Row> & { filterFn?: FilterFn<Row> });
         });
         return cols;
     }, [data]);
@@ -429,9 +449,9 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     );
 
     React.useEffect(() => setPageIndex(0), [columnFilters]);
-    
+
     // Удалено: превью количества строк для кнопок (для повышения производительности)
-    
+
     // Функция для получения индекса колонки по названию
     const getColumnIndex = (columnName: string): number => {
         const columnMap: Record<string, number> = {
@@ -441,79 +461,97 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
         };
         return columnMap[columnName] || 0;
     };
-    
-    return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-screen p-6 flex flex-col">
-                {/* Основной контейнер */}
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col flex-1">
-                    {/* Панель управления */}
-                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-6 border-b border-white/10">
-                        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                            {/*<div className="flex items-center gap-4">*/}
-                            {/*    <label className="flex items-center gap-3 text-white">*/}
-                            {/*        <span className="text-sm font-medium">На странице:</span>*/}
-                            {/*        <select*/}
-                            {/*            value={pageSize}*/}
-                            {/*            onChange={(e) => setPageSize(Number(e.target.value))}*/}
-                            {/*            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-slate-700"*/}
-                            {/*        >*/}
-                            {/*            {[40].map((n) => (*/}
-                            {/*                <option key={n} value={n}>{n}</option>*/}
-                            {/*            ))}*/}
-                            {/*        </select>*/}
-                            {/*    </label>*/}
-                            {/*</div>*/}
 
-                            <div className="flex items-center gap-4">
-                                <div className="px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium">
-                                    Найдено: <span className="text-blue-400 font-bold">{allRows.length.toLocaleString()}</span>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setColumnFilters([]);
-                                        setFilterInputs({});
-                                    }}
-                                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
-                                >
-                                    Сбросить фильтры
-                                </button>
+    return (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen flex flex-col">
+            {/* Основной контейнер */}
+            <div
+                className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col flex-1">
+                {/* Панель управления */}
+                                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-b border-white/10">
+                        <div className="flex flex-col lg:flex-row gap-4 items-center justify-end">
+                        {/*<div className="flex items-center gap-4">*/}
+                        {/*    <label className="flex items-center gap-3 text-white">*/}
+                        {/*        <span className="text-sm font-medium">На странице:</span>*/}
+                        {/*        <select*/}
+                        {/*            value={pageSize}*/}
+                        {/*            onChange={(e) => setPageSize(Number(e.target.value))}*/}
+                        {/*            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-slate-700"*/}
+                        {/*        >*/}
+                        {/*            {[40].map((n) => (*/}
+                        {/*                <option key={n} value={n}>{n}</option>*/}
+                        {/*            ))}*/}
+                        {/*        </select>*/}
+                        {/*    </label>*/}
+                        {/*</div>*/}
+
+                        <div className="flex items-center gap-4">
+                            <div
+                                className="px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium">
+                                Найдено: <span
+                                className="text-blue-400 font-bold">{allRows.length.toLocaleString()}</span>
                             </div>
+                            <button
+                                onClick={() => {
+                                    setColumnFilters([]);
+                                    setFilterInputs({});
+                                }}
+                                className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                            >
+                                Сбросить фильтры
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    {/* Таблица */}
+                                    {/* Таблица */}
                     <div className="flex-1 overflow-hidden">
-                                                <div className="w-full h-full flex flex-col overflow-x-auto">
-                            <table className="w-full table-auto border-collapse">
-                                <thead>
-                                {table.getHeaderGroups().map((hg) => (
-                                    <tr key={hg.id} className="bg-gradient-to-r from-slate-800 to-slate-700">
-                                        {hg.headers.map((h) => (
-                                            <th
+                        <div className="w-full h-full flex flex-col">
+                            <table className="w-full table-fixed border-collapse">
+                            <thead>
+                            {table.getHeaderGroups().map((hg) => (
+                                <tr key={hg.id} className="bg-gradient-to-r from-slate-800 to-slate-700">
+                                    {hg.headers.map((h) => (
+                                                                                    <th
                                                 key={h.id}
-                                                className={`text-left p-1 border-b border-slate-600 text-white font-semibold text-xs leading-tight sticky top-0 z-10 ${
-                                                    h.column.id === 'ДН' ? 'w-16' :
-                                                    h.column.id === 'Чемпионат' ? 'w-48 lg:w-56' :
-                                                    h.column.id === 'Матч' ? 'w-40 lg:w-48' :
-                                                    h.column.id === 'Дата' ? 'w-28 lg:w-32' :
-                                                    h.column.id === 'Счет' || h.column.id === '1 Тайм' ? 'w-20' :
-                                                    h.column.id === 'п1' || h.column.id === 'х' || h.column.id === 'п2' ? 'w-20' :
-                                                    h.column.id === 'Действия' ? 'w-32' :
-                                                    'w-20'
+                                                title={h.column.id}
+                                                className={`text-left p-0.5 border-b border-slate-600 text-white font-semibold text-xs leading-tight sticky top-0 z-10 ${
+                                                    h.column.id === 'ДН' ? 'w-1/12' :
+                                                    h.column.id === 'Чемпионат' ? 'w-3/12' :
+                                                    h.column.id === 'Дата' ? 'w-2/12' :
+                                                    h.column.id === 'Счет' ? 'w-1/12' :
+                                                    h.column.id === '1 Тайм' ? 'w-1/12' :
+                                                    h.column.id === 'Матч' ? 'w-3/12' :
+                                                    h.column.id === 'п1' ? 'w-1/12' :
+                                                    h.column.id === 'х' ? 'w-1/12' :
+                                                    h.column.id === 'п2' ? 'w-1/12' :
+                                                    h.column.id === 'Ф1(0)' ? 'w-1/12' :
+                                                    h.column.id === 'Ф2(0)' ? 'w-1/12' :
+                                                    h.column.id === '1 заб' ? 'w-1/12' :
+                                                    h.column.id === '2 заб' ? 'w-1/12' :
+                                                    h.column.id === 'ТБ2.5' ? 'w-1/12' :
+                                                    h.column.id === 'ТМ2.5' ? 'w-1/12' :
+                                                    h.column.id === 'ТБ3' ? 'w-1/12' :
+                                                    h.column.id === 'ТМ3' ? 'w-1/12' :
+                                                    h.column.id === 'ОЗ-Да' ? 'w-1/12' :
+                                                    h.column.id === 'ОЗ-Нет' ? 'w-1/12' :
+                                                    h.column.id === 'Действия' ? 'w-2/12' :
+                                                    'w-1/12'
                                                 }`}
-                                            >
+                                        >
 
-                                                {h.column.id === 'Действия' ? (
-                                                    <div className="select-none text-blue-300 font-bold text-center">
+                                            {h.column.id === 'Действия' ? (
+                                                <div className="select-none text-blue-300 font-bold text-center">
+                                                    {h.column.id}
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div
+                                                        className="select-none text-blue-300 font-bold mb-1 text-center">
                                                         {h.column.id}
                                                     </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="select-none text-blue-300 font-bold mb-1 text-center">
-                                                            {h.column.id}
-                                                </div>
 
-                                                        {/* Поле фильтра на всю доступную ширину */}
+                                                    {/* Поле фильтра на всю доступную ширину */}
                                                     <input
                                                         value={filterInputs[h.column.id] || ""}
                                                         onChange={(e) => {
@@ -522,152 +560,174 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                                                             setFilterInputs(prev => ({...prev, [h.column.id]: value}));
                                                             debouncedSetFilter([h.column.id, value]);
                                                         }}
-                                                    placeholder={`${h.column.id}`}
-                                                    className="w-full px-2 py-0.5 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700"
+                                                        placeholder={`${h.column.id}`}
+                                                        className="w-full px-1 py-0 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                                                         onClick={(e) => e.stopPropagation()}
                                                     />
-                                                        </>
-                                                    )}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                ))}
-                                </thead>
+                                                </>
+                                            )}
+                                        </th>
+                                    ))}
+                                </tr>
+                            ))}
+                            </thead>
 
-                                <tbody className="divide-y divide-slate-700/50">
-                                {pageRows.map((row, rowIndex) => (
-                                    <tr
-                                        key={row.id}
-                                        className={`transition-all duration-200 hover:bg-slate-800/30 ${
-                                            rowIndex % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-800/20'
-                                        }`}
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <td
-                                                key={cell.id}
-                                                className={`p-1 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center ${
-                                                    cell.column.id === 'ДН' ? 'w-16' :
-                                                    cell.column.id === 'Чемпионат' ? 'w-48 lg:w-56' :
-                                                    cell.column.id === 'Матч' ? 'w-40 lg:w-48' :
-                                                    cell.column.id === 'Дата' ? 'w-28 lg:w-32' :
-                                                    cell.column.id === 'Счет' || cell.column.id === '1 Тайм' ? 'w-20' :
-                                                    cell.column.id === 'п1' || cell.column.id === 'х' || cell.column.id === 'п2' ? 'w-20' :
-                                                    cell.column.id === 'Действия' ? 'w-32' :
-                                                    'w-20'
-                                                }`}
-                                                style={{
-                                                    backgroundColor: (() => {
+                            <tbody className="divide-y divide-slate-700/50">
+                            {pageRows.map((row, rowIndex) => (
+                                <tr
+                                    key={row.id}
+                                    className={`transition-all duration-200 hover:bg-slate-800/30 ${
+                                        rowIndex % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-800/20'
+                                    }`}
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                                                                 <td
+                                             key={cell.id}
+                                             className={`p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${
+                                                 cell.column.id === 'ДН' ? 'w-1/12' :
+                                                 cell.column.id === 'Чемпионат' ? 'w-3/12' :
+                                                 cell.column.id === 'Дата' ? 'w-2/12' :
+                                                 cell.column.id === 'Счет' ? 'w-1/12' :
+                                                 cell.column.id === '1 Тайм' ? 'w-1/12' :
+                                                 cell.column.id === 'Матч' ? 'w-3/12' :
+                                                 cell.column.id === 'п1' ? 'w-1/12' :
+                                                 cell.column.id === 'х' ? 'w-1/12' :
+                                                 cell.column.id === 'п2' ? 'w-1/12' :
+                                                                                                    cell.column.id === 'Ф1(0)' ? 'w-1/12' :
+                                                   cell.column.id === 'Ф2(0)' ? 'w-1/12' :
+                                                 cell.column.id === '1 заб' ? 'w-1/12' :
+                                                 cell.column.id === '2 заб' ? 'w-1/12' :
+                                                 cell.column.id === 'ТБ2.5' ? 'w-1/12' :
+                                                 cell.column.id === 'ТМ2.5' ? 'w-1/12' :
+                                                 cell.column.id === 'ТБ3' ? 'w-1/12' :
+                                                 cell.column.id === 'ТМ3' ? 'w-1/12' :
+                                                 cell.column.id === 'ОЗ-Да' ? 'w-1/12' :
+                                                 cell.column.id === 'ОЗ-Нет' ? 'w-1/12' :
+                                                 cell.column.id === 'Действия' ? 'w-2/12' :
+                                                 'w-1/12'
+                                             }`}
+                                            style={{
+                                                backgroundColor: (() => {
+                                                    const betResult = getBetResultForCell(cell.column.id, row.original);
+                                                    if (betResult === 1) return 'rgba(34, 197, 94, 0.2)'; // green
+                                                    return 'transparent';
+                                                })()
+                                            }}
+                                            onClick={() => {
+                                                const value = String(cell.getValue() ?? "");
+                                                const cleanValue = renderClean(value);
+                                                if (cleanValue && cleanValue.trim()) {
+                                                    setFilterInputs(prev => ({
+                                                        ...prev,
+                                                        [cell.column.id]: cleanValue.trim()
+                                                    }));
+                                                    debouncedSetFilter([cell.column.id, cleanValue.trim()]);
+                                                }
+                                            }}
+                                                                                         title={renderClean(String(cell.getValue() ?? ""))}
+                                        >
+                                            {cell.column.id === 'Действия' ? (
+                                                <div className="flex gap-1 justify-center">
+                                                    <button
+                                                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                                                        onClick={() => handleK1Click(row.original)}
+                                                    >
+                                                        К1
+                                                    </button>
+                                                    <button
+                                                        className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                                                        onClick={() => handleMathClick(row.original)}
+                                                    >
+                                                        м
+                                                    </button>
+                                                    <button
+                                                        className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                                                        onClick={() => handleTotalClick(row.original)}
+                                                    >
+                                                        Т
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="group-hover:scale-105 transition-transform duration-200 truncate overflow-hidden text-ellipsis whitespace-nowrap">
+                                                    {(() => {
                                                         const betResult = getBetResultForCell(cell.column.id, row.original);
-                                                        if (betResult === 1) return 'rgba(34, 197, 94, 0.2)'; // green
-                                                        return 'transparent';
-                                                    })()
-                                                }}
-                                                onClick={() => {
-                                                    const value = String(cell.getValue() ?? "");
-                                                    const cleanValue = renderClean(value);
-                                                    if (cleanValue && cleanValue.trim()) {
-                                                        setFilterInputs(prev => ({...prev, [cell.column.id]: cleanValue.trim()}));
-                                                        debouncedSetFilter([cell.column.id, cleanValue.trim()]);
-                                                    }
-                                                }}
-                                                title="Клик для вставки в фильтр"
-                                            >
-                                                {cell.column.id === 'Действия' ? (
-                                                    <div className="flex gap-1 justify-center">
-                                                        <button
-                                                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
-                                                            onClick={() => handleK1Click(row.original)}
-                                                        >
-                                                            К1
-                                                        </button>
-                                                        <button
-                                                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
-                                                            onClick={() => handleMathClick(row.original)}
-                                                        >
-                                                            м
-                                                        </button>
-                                                        <button
-                                                            className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
-                                                            onClick={() => handleTotalClick(row.original)}
-                                                        >
-                                                            Т
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="group-hover:scale-105 transition-transform duration-200 truncate">
-                                                        {(() => {
-                                                            const betResult = getBetResultForCell(cell.column.id, row.original);
-                                                            const value = renderClean(String(cell.getValue() ?? ""));
+                                                        const value = renderClean(String(cell.getValue() ?? ""));
 
-                                                            if (betResult === 1) {
-                                                                return <span className="text-green-300 font-semibold">{value}</span>;
-                                                            }
+                                                        if (betResult === 1) {
+                                                            return <span
+                                                                className="text-green-300 font-semibold">{value}</span>;
+                                                        }
 
-                                                            return value;
-                                                        })()}
+                                                        return value;
+                                                    })()}
                                                 </div>
-                                                )}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                                {pageRows.length === 0 && (
-                                    <tr>
-                                        <td colSpan={columns.length}
-                                            className="p-8 text-center text-slate-400 text-lg">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center">
-                                                    <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
-                                                    </svg>
-                                                </div>
-                                                <span>Ничего не найдено</span>
-                                            </div>
+                                            )}
                                         </td>
-                                    </tr>
-                                )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Пагинация */}
-                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-6 border-t border-white/10">
-                        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-                            <button
-                                onClick={() => setPageIndex(0)}
-                                disabled={pageIndex === 0}
-                                className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-                            >
-                                «
-                            </button>
-                            <button
-                                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                                disabled={pageIndex === 0}
-                                className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-                            >
-                                ‹
-                            </button>
-                            <span className="px-6 py-2 bg-slate-700/50 rounded-lg border border-slate-600 text-white text-sm font-medium">
-                                {pageIndex + 1} / {pageCount}
-                            </span>
-                            <button
-                                onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-                                disabled={pageIndex >= pageCount - 1}
-                                className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-                            >
-                                ›
-                            </button>
-                            <button
-                                onClick={() => setPageIndex(pageCount - 1)}
-                                disabled={pageIndex >= pageCount - 1}
-                                className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-                            >
-                                »
-                            </button>
-                        </div>
+                                    ))}
+                                </tr>
+                            ))}
+                            {pageRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={columns.length}
+                                        className="p-8 text-center text-slate-400 text-lg">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div
+                                                className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center">
+                                                <svg className="w-8 h-8 text-slate-500" fill="none"
+                                                     stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                          d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"/>
+                                                </svg>
+                                            </div>
+                                            <span>Ничего не найдено</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+
+                {/* Пагинация */}
+                <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-t border-white/10">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                        <button
+                            onClick={() => setPageIndex(0)}
+                            disabled={pageIndex === 0}
+                            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
+                        >
+                            «
+                        </button>
+                        <button
+                            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                            disabled={pageIndex === 0}
+                            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
+                        >
+                            ‹
+                        </button>
+                        <span
+                            className="px-6 py-2 bg-slate-700/50 rounded-lg border border-slate-600 text-white text-sm font-medium">
+                                {pageIndex + 1} / {pageCount}
+                            </span>
+                        <button
+                            onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                            disabled={pageIndex >= pageCount - 1}
+                            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
+                        >
+                            ›
+                        </button>
+                        <button
+                            onClick={() => setPageIndex(pageCount - 1)}
+                            disabled={pageIndex >= pageCount - 1}
+                            className="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
+                        >
+                            »
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 });
@@ -685,7 +745,7 @@ export default function App() {
             try {
                 setError(null);
 
-                const response = await fetch('/coefficient-total-compressed.gz', {
+                const response = await fetch('/dataset.br', {
                     headers: {
                         'Accept-Encoding': 'gzip, deflate, br',
                         'Accept': 'application/json'
@@ -699,7 +759,31 @@ export default function App() {
                 const result = await response.json();
 
                 if (isMounted) {
-                    setRows(result.data);
+                    // Сначала сортируем по epok (timestamp) - свежие данные в начале
+                    const sortedByEpoch = result.data.sort((a: Row, b: Row) => {
+                        // Извлекаем timestamp из span'а: <span>1548003600</span>
+                        const getEpoch = (row: Row) => {
+                            const dateStr = String(row[2] || '');
+                            const match = dateStr.match(/<span[^>]*>(\d+)<\/span>/);
+                            return match ? parseInt(match[1]) : 0;
+                        };
+
+                        const epochA = getEpoch(a);
+                        const epochB = getEpoch(b);
+                        return epochB - epochA; // Больший timestamp = свежее
+                    });
+
+                    // Потом очищаем даты от span'ов с timestamp
+                    const cleanedData = sortedByEpoch.map((row: Row) => {
+                        const newRow = [...row];
+                        // Очищаем колонку даты (индекс 2) от span'ов с timestamp
+                        if (newRow[2]) {
+                            newRow[2] = String(newRow[2]).replace(/<span[^>]*>.*?<\/span>/g, "").trim();
+                        }
+                        return newRow;
+                    });
+
+                    setRows(cleanedData);
                 }
             } catch (e) {
                 console.error('Ошибка загрузки данных:', e);
@@ -718,11 +802,14 @@ export default function App() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex items-center justify-center p-6">
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center max-w-md">
+            <div
+                className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex items-center justify-center p-6">
+                <div
+                    className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center max-w-md">
                     <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Ошибка загрузки</h3>
@@ -734,7 +821,8 @@ export default function App() {
 
     if (!rows) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+            <div
+                className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
                 <div className="text-center">
                     <div className="mb-6">
                         <div className="loading-spinner mx-auto"></div>
