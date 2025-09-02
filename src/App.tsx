@@ -442,7 +442,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     };
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen p-6 flex flex-col">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen p-2 sm:p-4 lg:p-6 flex flex-col">
             {/* Основной контейнер */}
             <div
                 className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col flex-1">
@@ -483,22 +483,39 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                     </div>
                 </div>
 
-                {/* Таблица */}
-                <div className="flex-1 overflow-hidden">
-                    <div className="w-full h-full flex flex-col">
-                        <table className="w-full table-auto border-collapse">
+                                    {/* Таблица */}
+                    <div className="flex-1 overflow-hidden">
+                        <div className="w-full h-full flex flex-col">
+                            <table className="w-full table-fixed border-collapse">
                             <thead>
                             {table.getHeaderGroups().map((hg) => (
                                 <tr key={hg.id} className="bg-gradient-to-r from-slate-800 to-slate-700">
                                     {hg.headers.map((h) => (
                                                                                     <th
                                                 key={h.id}
+                                                title={h.column.id}
                                                 className={`text-left p-0.5 border-b border-slate-600 text-white font-semibold text-xs leading-tight sticky top-0 z-10 ${
-                                                    h.column.id === 'Чемпионат' ? 'min-w-48' :
-                                                    h.column.id === 'Матч' ? 'min-w-40' :
-                                                    h.column.id === 'Дата' ? 'min-w-32' :
-                                                    h.column.id === 'Действия' ? 'min-w-24' :
-                                                    'min-w-16'
+                                                    h.column.id === 'ДН' ? 'w-1/12' :
+                                                    h.column.id === 'Чемпионат' ? 'w-3/12' :
+                                                    h.column.id === 'Дата' ? 'w-2/12' :
+                                                    h.column.id === 'Счет' ? 'w-1/12' :
+                                                    h.column.id === '1 Тайм' ? 'w-1/12' :
+                                                    h.column.id === 'Матч' ? 'w-3/12' :
+                                                    h.column.id === 'п1' ? 'w-1/12' :
+                                                    h.column.id === 'х' ? 'w-1/12' :
+                                                    h.column.id === 'п2' ? 'w-1/12' :
+                                                    h.column.id === 'Φ1(0)' ? 'w-1/12' :
+                                                    h.column.id === 'Φ2(0)' ? 'w-1/12' :
+                                                    h.column.id === '1 заб' ? 'w-1/12' :
+                                                    h.column.id === '2 заб' ? 'w-1/12' :
+                                                    h.column.id === 'ТБ2.5' ? 'w-1/12' :
+                                                    h.column.id === 'ТМ2.5' ? 'w-1/12' :
+                                                    h.column.id === 'ТБ3' ? 'w-1/12' :
+                                                    h.column.id === 'ТМ3' ? 'w-1/12' :
+                                                    h.column.id === 'ОЗ-Да' ? 'w-1/12' :
+                                                    h.column.id === 'ОЗ-Нет' ? 'w-1/12' :
+                                                    h.column.id === 'Действия' ? 'w-2/12' :
+                                                    'w-1/12'
                                                 }`}
                                         >
 
@@ -546,11 +563,27 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                                                                                  <td
                                              key={cell.id}
                                              className={`p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${
-                                                 cell.column.id === 'Чемпионат' ? 'min-w-48' :
-                                                 cell.column.id === 'Матч' ? 'min-w-40' :
-                                                 cell.column.id === 'Дата' ? 'min-w-32' :
-                                                 cell.column.id === 'Действия' ? 'min-w-24' :
-                                                 'min-w-16'
+                                                 cell.column.id === 'ДН' ? 'w-1/12' :
+                                                 cell.column.id === 'Чемпионат' ? 'w-3/12' :
+                                                 cell.column.id === 'Дата' ? 'w-2/12' :
+                                                 cell.column.id === 'Счет' ? 'w-1/12' :
+                                                 cell.column.id === '1 Тайм' ? 'w-1/12' :
+                                                 cell.column.id === 'Матч' ? 'w-3/12' :
+                                                 cell.column.id === 'п1' ? 'w-1/12' :
+                                                 cell.column.id === 'х' ? 'w-1/12' :
+                                                 cell.column.id === 'п2' ? 'w-1/12' :
+                                                 cell.column.id === 'Φ1(0)' ? 'w-1/12' :
+                                                 cell.column.id === 'Φ2(0)' ? 'w-1/12' :
+                                                 cell.column.id === '1 заб' ? 'w-1/12' :
+                                                 cell.column.id === '2 заб' ? 'w-1/12' :
+                                                 cell.column.id === 'ТБ2.5' ? 'w-1/12' :
+                                                 cell.column.id === 'ТМ2.5' ? 'w-1/12' :
+                                                 cell.column.id === 'ТБ3' ? 'w-1/12' :
+                                                 cell.column.id === 'ТМ3' ? 'w-1/12' :
+                                                 cell.column.id === 'ОЗ-Да' ? 'w-1/12' :
+                                                 cell.column.id === 'ОЗ-Нет' ? 'w-1/12' :
+                                                 cell.column.id === 'Действия' ? 'w-2/12' :
+                                                 'w-1/12'
                                              }`}
                                             style={{
                                                 backgroundColor: (() => {
@@ -570,7 +603,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                                                     debouncedSetFilter([cell.column.id, cleanValue.trim()]);
                                                 }
                                             }}
-                                            title="Клик для вставки в фильтр"
+                                                                                         title={renderClean(String(cell.getValue() ?? ""))}
                                         >
                                             {cell.column.id === 'Действия' ? (
                                                 <div className="flex gap-1 justify-center">
