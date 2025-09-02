@@ -442,13 +442,13 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     };
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen p-2 sm:p-4 lg:p-6 flex flex-col">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen flex flex-col">
             {/* Основной контейнер */}
             <div
-                className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col flex-1">
+                className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col flex-1">
                 {/* Панель управления */}
-                <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-6 border-b border-white/10">
-                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-b border-white/10">
+                        <div className="flex flex-col lg:flex-row gap-4 items-center justify-end">
                         {/*<div className="flex items-center gap-4">*/}
                         {/*    <label className="flex items-center gap-3 text-white">*/}
                         {/*        <span className="text-sm font-medium">На странице:</span>*/}
@@ -670,7 +670,7 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                 </div>
 
                 {/* Пагинация */}
-                <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-6 border-t border-white/10">
+                <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-t border-white/10">
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
                         <button
                             onClick={() => setPageIndex(0)}
