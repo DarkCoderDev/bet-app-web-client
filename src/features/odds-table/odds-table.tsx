@@ -653,7 +653,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                 {/* Пагинация - прибита к низу */}
                 <div
-                    className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-t border-white/10 flex-shrink-0">
+                    className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-4 py-2 border-t border-white/10 flex-shrink-0">
                     <div className="flex flex-row sm:flex-Match gap-4 items-center justify-center">
                         <button
                             onClick={() => setPageIndex(0)}
