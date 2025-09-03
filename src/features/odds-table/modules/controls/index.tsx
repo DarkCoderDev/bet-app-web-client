@@ -25,7 +25,7 @@ export const Controls = (props: Props) => {
 
     return (
         <div
-            className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-3 border-b border-white/10 flex-shrink-0">
+           className='bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-1 border-b border-white/10 flex-shrink-0'>
             <div className="flex flex-col lg:flex-Match gap-3 items-end justify-end">
                 <div className="flex items-center gap-3">
                     <div
