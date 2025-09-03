@@ -512,7 +512,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                         <table className="w-full table-fixed border-collapse overflow-auto h-full">
                             <thead className="sticky top-0 z-10">
                             {table.getHeaderGroups().map((hg) => (
-                                <tr key={hg.id} className="h-12 bg-gradient-to-r from-slate-800 to-slate-700">
+                                <tr key={hg.id} className="h-8 bg-gradient-to-r from-slate-800 to-slate-700">
                                     {hg.headers.map((h) => (
                                         <th
                                             key={h.id}
@@ -561,7 +561,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                 return (
                                     <tr
                                         key={match.id}
-                                        className={`h-12 transition-all duration-200 hover:bg-slate-800/30 ${
+                                        className={`h-8 transition-all duration-200 hover:bg-slate-800/30 ${
                                             matchIndex % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-800/20'
                                         } ${isHighlighted ? 'bg-yellow-500/20' : ''}`}
                                     >
@@ -596,7 +596,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         {signatures.map((signature) => (
                                                             <button
                                                                 key={signature.label}
-                                                                className="px-2 py-1 text-white text-xs rounded transition-colors"
+                                                                className="px-1 py-0.5 text-white text-xs rounded transition-colors"
                                                                 style={{
                                                                     backgroundColor: signature.color
                                                                 }}
@@ -607,9 +607,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         ))}
                                                     </div>
                                                 ) : cell.column.id === 'Действия' ? (
-                                                    <div className="flex gap-2 justify-center">
+                                                    <div className="flex gap-1 justify-center">
                                                         <button
-                                                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-all duration-200"
+                                                            className="px-1 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-all duration-200"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleToggleHighlight(match.original);
@@ -619,7 +619,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             {isHighlighted ? "✅" : "✏️"}
                                                         </button>
                                                         <button
-                                                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-all duration-200"
+                                                            className="px-1 py-0.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-all duration-200"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleSaveMatch(match.original);
