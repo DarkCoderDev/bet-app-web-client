@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import {useSearchParams} from "react-router-dom";
 import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -11,9 +11,11 @@ import type {Match} from "entities/match/types.ts";
 import {debounce} from "shared/libs.ts";
 import {MatchIndexMap, RusMatchKeys, MatchKeys} from "entities/match/consts.ts";
 import {signatures} from "entities/filter/signatures.ts";
-import { calculateBetResult, includesText, renderClean } from './lib';
-import { BetManagementService } from "entities/match/bet-management.ts";
-import { SavedMatchesModal } from "components/saved-matches.tsx";
+import {calculateBetResult, includesText, renderClean} from './lib';
+import {BetManagementService} from "entities/match/bet-management.ts";
+import {SavedMatchesModal} from "components/saved-matches.tsx";
+import {FinancialAnalysis} from "features/odds-table/modules/financial-analysis";
+import {Controls} from "features/odds-table/modules/controls";
 
 const columnHelper = createColumnHelper<Match>();
 
@@ -140,7 +142,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         Object.entries(filters).forEach(([columnName, value]) => {
             if (value && value.trim() !== '') {
                 // Находим соответствующий индекс для названия колонки
-                const matchKey = Object.entries(RusMatchKeys).find(([key, name]) => name === columnName)?.[0];
+                const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === columnName)?.[0];
                 if (matchKey && matchKey in MatchIndexMap) {
                     const index = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
                     newSearchParams.set(String(index), value);
@@ -285,7 +287,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             setColumnFilters(newFilters);
 
             // Обновляем URL с новыми фильтрами
-            const newFilterInputs = { ...filterInputs };
+            const newFilterInputs = {...filterInputs};
             batchFilters.current.forEach((value, columnId) => {
                 if (value && value.trim()) {
                     newFilterInputs[columnId] = value;
@@ -310,7 +312,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             });
 
             // Обновляем URL с новыми фильтрами
-            const newFilterInputs = { ...filterInputs, [columnId]: value };
+            const newFilterInputs = {...filterInputs, [columnId]: value};
             updateUrlWithFilters(newFilterInputs);
         }, 300),
         [filterInputs, updateUrlWithFilters]
@@ -456,41 +458,16 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             {/* Основной контейнер */}
             <div
                 className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col h-full">
-                {/* Панель управления */}
-                <div
-                    className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 p-4 border-b border-white/10 flex-shrink-0">
-                    <div className="flex flex-col lg:flex-Match gap-4 items-end justify-end">
-                        <div className="flex items-center gap-4">
-                            <div
-                                className="px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium">
-                                Найдено: <span
-                                className="text-blue-400 font-bold">{allRows.length.toLocaleString()}</span>
-                            </div>
-                            <button
-                                onClick={() => setIsSavedMatchesModalOpen(true)}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm"
-                            >
-                                💾 Сохраненные матчи
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setColumnFilters([]);
-                                    setFilterInputs({});
-                                    // Очищаем URL
-                                    setSearchParams(new URLSearchParams());
-                                }}
-                                className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm"
-                            >
-                                Сбросить фильтры
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
+
+                <Controls rowCount={allRows.length} setColumnFilters={setColumnFilters}
+                          setFilterInputs={setFilterInputs} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
+                          setSearchParams={setSearchParams}/>
+                <FinancialAnalysis/>
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
-                    <div className="w-full h-full">
-                        <table className="h-auto w-full table-fixed border-collapse">
+                    <div className="max-h-[100%] overflow-y-auto border border-slate-700 rounded-lg">
+                        <table className="w-full table-fixed border-collapse overflow-auto h-full">
                             <thead className="sticky top-0 z-10">
                             {table.getHeaderGroups().map((hg) => (
                                 <tr key={hg.id} className="h-12 bg-gradient-to-r from-slate-800 to-slate-700">
@@ -549,7 +526,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                         {match.getVisibleCells().map((cell) => (
                                             <td
                                                 key={cell.id}
-                                                className={`p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${(cell.column.columnDef as { meta?: { widthClass?: string } }).meta?.widthClass ?? 'w-1/12'}`}
+                                                className={`p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${(cell.column.columnDef as {
+                                                    meta?: { widthClass?: string }
+                                                }).meta?.widthClass ?? 'w-1/12'}`}
                                                 style={{
                                                     backgroundColor: (() => {
                                                         const betResult = getBetResultForCell(cell.column.id, match.original);
