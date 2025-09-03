@@ -133,8 +133,40 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     // Локальное состояние для полей фильтрации
     const [filterInputs, setFilterInputs] = React.useState<Record<string, string>>({});
 
+    // Batch-система для массовых обновлений фильтров
+    const [isBatching, setIsBatching] = React.useState(false);
+    const batchFilters = React.useRef<Map<string, string>>(new Map());
+    const batchTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Debounced функция для фильтрации
+    // Начать батч
+    const beginBatch = React.useCallback(() => {
+        setIsBatching(true);
+        batchFilters.current.clear();
+    }, []);
+
+    // Завершить батч
+    const endBatch = React.useCallback(() => {
+        setIsBatching(false);
+        
+        if (batchTimeout.current) {
+            clearTimeout(batchTimeout.current);
+        }
+        
+        batchTimeout.current = setTimeout(() => {
+            // Применяем все фильтры из батча
+            const newFilters: ColumnFiltersState = [];
+            batchFilters.current.forEach((value, columnId) => {
+                if (value && value.trim()) {
+                    newFilters.push({ id: columnId, value: value.trim() });
+                }
+            });
+            
+            setColumnFilters(newFilters);
+            batchFilters.current.clear();
+        }, 200);
+    }, []);
+
+    // Debounced функция для фильтрации (для одиночных обновлений)
     const debouncedSetFilter = React.useMemo(
         () => debounce((args: [string, string]) => {
             const [columnId, value] = args;
@@ -153,11 +185,6 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
     const handleK1Click = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
 
         // Очищаем поля ввода
         setFilterInputs(prev => {
@@ -186,20 +213,17 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'п2': truncatedP2
         }));
 
-        // Применяем фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-    }, [debouncedSetFilter]);
+        // Применяем фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     const handleMathClick = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
 
         // Очищаем поля ввода
         setFilterInputs(prev => {
@@ -258,30 +282,27 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'ОЗ-Нет': truncatedOzNo
         }));
 
-        // Применяем все фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-        debouncedSetFilter(['Ф1(0)', truncatedF10]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['2 заб', truncatedZab2]);
-        debouncedSetFilter(['ТБ2.5', truncatedTb25]);
-        debouncedSetFilter(['ТМ2.5', truncatedTm25]);
-        debouncedSetFilter(['ТБ3', truncatedTb3]);
-        debouncedSetFilter(['ТМ3', truncatedTm3]);
-        debouncedSetFilter(['ОЗ-Да', truncatedOzYes]);
-        debouncedSetFilter(['ОЗ-Нет', truncatedOzNo]);
-    }, [debouncedSetFilter]);
+        // Применяем все фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        batchFilters.current.set('Ф1(0)', truncatedF10);
+        batchFilters.current.set('Ф2(0)', truncatedF20);
+        batchFilters.current.set('1 заб', truncatedZab1);
+        batchFilters.current.set('2 заб', truncatedZab2);
+        batchFilters.current.set('ТБ2.5', truncatedTb25);
+        batchFilters.current.set('ТМ2.5', truncatedTm25);
+        batchFilters.current.set('ТБ3', truncatedTb3);
+        batchFilters.current.set('ТМ3', truncatedTm3);
+        batchFilters.current.set('ОЗ-Да', truncatedOzYes);
+        batchFilters.current.set('ОЗ-Нет', truncatedOzNo);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     const handleTotalClick = React.useCallback((row: any) => {
         // Сначала очищаем все фильтры коэффициентов
         const coefficientColumns = ['п1', 'х', 'п2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'ОЗ-Да', 'ОЗ-Нет'];
-
-        // Очищаем фильтры
-        coefficientColumns.forEach(col => {
-            debouncedSetFilter([col, '']);
-        });
 
         // Очищаем поля ввода
         setFilterInputs(prev => {
@@ -343,23 +364,23 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
             'ОЗ-Нет': truncatedOzNo
         }));
 
-        // Применяем все фильтры
-        debouncedSetFilter(['п1', truncatedP1]);
-        debouncedSetFilter(['х', truncatedX]);
-        debouncedSetFilter(['п2', truncatedP2]);
-        debouncedSetFilter(['Ф1(0)', truncatedF10]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['Ф2(0)', truncatedF20]);
-        debouncedSetFilter(['1 заб', truncatedZab1]);
-        debouncedSetFilter(['2 заб', truncatedZab2]);
-        debouncedSetFilter(['ТБ2.5', truncatedTb25]);
-        debouncedSetFilter(['ТМ2.5', truncatedTm25]);
-        debouncedSetFilter(['ТБ3', truncatedTb3]);
-        debouncedSetFilter(['ТМ3', truncatedTm3]);
-        debouncedSetFilter(['ОЗ-Да', truncatedOzYes]);
-        debouncedSetFilter(['ОЗ-Нет', truncatedOzNo]);
-    }, [debouncedSetFilter]);
+        // Применяем все фильтры через batch
+        beginBatch();
+        batchFilters.current.set('п1', truncatedP1);
+        batchFilters.current.set('х', truncatedX);
+        batchFilters.current.set('п2', truncatedP2);
+        batchFilters.current.set('Ф1(0)', truncatedF10);
+        batchFilters.current.set('Ф2(0)', truncatedF20);
+        batchFilters.current.set('1 заб', truncatedZab1);
+        batchFilters.current.set('2 заб', truncatedZab2);
+        batchFilters.current.set('ТБ2.5', truncatedTb25);
+        batchFilters.current.set('ТМ2.5', truncatedTm25);
+        batchFilters.current.set('ТБ3', truncatedTb3);
+        batchFilters.current.set('ТМ3', truncatedTm3);
+        batchFilters.current.set('ОЗ-Да', truncatedOzYes);
+        batchFilters.current.set('ОЗ-Нет', truncatedOzNo);
+        endBatch();
+    }, [beginBatch, endBatch]);
 
     // колонки
     const columns = React.useMemo<ColumnDef<Row>[]>(() => {
@@ -392,8 +413,8 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                 header: h,
                 accessorFn: (row) => h === 'Действия' ? '' : row[idx],
                 cell: (ctx) => renderClean(ctx.getValue<string>()),
-                filterFn: includesText,
-            } as ColumnDef<Row> & { filterFn: FilterFn<Row> });
+                filterFn: h === 'Действия' ? undefined : includesText,
+            } as ColumnDef<Row> & { filterFn?: FilterFn<Row> });
         });
         return cols;
     }, [data]);
@@ -504,8 +525,8 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                                                     h.column.id === 'п1' ? 'w-1/12' :
                                                     h.column.id === 'х' ? 'w-1/12' :
                                                     h.column.id === 'п2' ? 'w-1/12' :
-                                                    h.column.id === 'Φ1(0)' ? 'w-1/12' :
-                                                    h.column.id === 'Φ2(0)' ? 'w-1/12' :
+                                                    h.column.id === 'Ф1(0)' ? 'w-1/12' :
+                                                    h.column.id === 'Ф2(0)' ? 'w-1/12' :
                                                     h.column.id === '1 заб' ? 'w-1/12' :
                                                     h.column.id === '2 заб' ? 'w-1/12' :
                                                     h.column.id === 'ТБ2.5' ? 'w-1/12' :
@@ -572,8 +593,8 @@ export const DataTable = React.memo(function DataTable({data}: { data: Row[] }) 
                                                  cell.column.id === 'п1' ? 'w-1/12' :
                                                  cell.column.id === 'х' ? 'w-1/12' :
                                                  cell.column.id === 'п2' ? 'w-1/12' :
-                                                 cell.column.id === 'Φ1(0)' ? 'w-1/12' :
-                                                 cell.column.id === 'Φ2(0)' ? 'w-1/12' :
+                                                                                                    cell.column.id === 'Ф1(0)' ? 'w-1/12' :
+                                                   cell.column.id === 'Ф2(0)' ? 'w-1/12' :
                                                  cell.column.id === '1 заб' ? 'w-1/12' :
                                                  cell.column.id === '2 заб' ? 'w-1/12' :
                                                  cell.column.id === 'ТБ2.5' ? 'w-1/12' :
