@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect, useMemo} from "react";
 import {useSearchParams} from "react-router-dom";
 import {
     type ColumnDef,
@@ -16,6 +16,7 @@ import {BetManagementService} from "entities/match/bet-management.ts";
 import {SavedMatchesModal} from "components/saved-matches.tsx";
 import {FinancialAnalysis} from "features/odds-table/modules/financial-analysis";
 import {Controls} from "features/odds-table/modules/controls";
+import clsx from "clsx";
 
 const columnHelper = createColumnHelper<Match>();
 
@@ -451,6 +452,40 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         [allRows, pageIndex, pageSize]
     );
 
+    const financialResults = useMemo(() => {
+        if (allRows.length < 1000) {
+            const totals: Record<string, number> = {
+                "ТБ2.5": 0,
+                "ТБ3": 0,
+                "ТМ2.5": 0,
+                "ТМ3": 0,
+                "Ф1(0)": 0,
+                "Ф2(0)": 0,
+                "Х": 0,
+                "Оз-да": 0,
+                "Оз-нет": 0,
+                "П1": 0,
+                "П2": 0,
+            };
+
+            allRows.forEach((row) => {
+                row.getVisibleCells().forEach((cell) => {
+                    if (cell.column.id in totals) {
+                        const coef = Number(cell.getValue());
+                        const isWin = getBetResultForCell(cell.column.id, row.original);
+                        if (!isNaN(coef)) {
+                            totals[cell.column.id] += isWin ? coef - 1 : -1;
+                        }
+                    }
+                });
+            });
+
+            return totals;
+        }
+    }, [allRows]);
+
+    console.log(financialResults)
+
     React.useEffect(() => setPageIndex(0), [columnFilters, pageSize]);
 
     return (
@@ -463,6 +498,13 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 <Controls rowCount={allRows.length} setColumnFilters={setColumnFilters}
                           setFilterInputs={setFilterInputs} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
                           setSearchParams={setSearchParams}/>
+                <div className="flex gap-2 px-2 py-1">
+                    {financialResults ? Object.entries(financialResults).map(([key, value]) => (
+                        <div className={clsx([value > 0 ? 'bg-green-200' : 'bg-red-300', 'p-2'])}><span
+                            className="font-bold text-xs">{key}</span>:{value.toFixed(2)}</div>
+                    )) : null}
+                </div>
+
                 <FinancialAnalysis/>
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
