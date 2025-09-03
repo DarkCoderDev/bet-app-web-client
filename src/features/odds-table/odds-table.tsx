@@ -490,7 +490,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
                     <div className="w-full h-full">
-                        <table className="h-auto w-full table-fixed border-collapse h-full">
+                        <table className="h-auto w-full table-fixed border-collapse">
                             <thead className="sticky top-0 z-10">
                             {table.getHeaderGroups().map((hg) => (
                                 <tr key={hg.id} className="h-12 bg-gradient-to-r from-slate-800 to-slate-700">

@@ -1,7 +1,7 @@
 import React from "react";
 import {BrowserRouter as Router, Routes, Route, Navigate} from "react-router-dom";
 import './global.css';
-import { TablePage } from "../pages/table-page";
+import { TablePage } from "../pages/table/table-page.tsx";
 import { FinanceManagerPage } from "../pages/finance-manager-page";
 import type {Match} from "entities/match/types.ts";
 import { getDataSet } from "entities/match/api.ts";
