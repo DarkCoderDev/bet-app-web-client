@@ -19,6 +19,7 @@ import clsx from "clsx";
 import {Button} from "shared/ui/Button";
 import {EmptyData} from "features/odds-table/ui/emptyData.tsx";
 import {Pagination} from "features/odds-table/ui/pagination.tsx";
+import toast from "react-hot-toast";
 
 const columnHelper = createColumnHelper<Match>();
 
@@ -372,10 +373,10 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             console.log('Матч сохранен:', savedMatch);
 
             // Показываем уведомление (можно заменить на toast)
-            alert('Матч сохранен в финансовый менеджер!');
+            toast.success('Матч сохранен в финансовый менеджер!');
         } catch (error) {
             console.error('Ошибка сохранения матча:', error);
-            alert('Ошибка сохранения матча');
+            toast.error('Ошибка сохранения матча');
         }
     }, [filterInputs, betService]);
 

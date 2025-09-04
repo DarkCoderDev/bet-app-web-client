@@ -210,9 +210,9 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                     const data = event.target?.result as string;
                     if (betService.importData(data)) {
                         loadMatches();
-                        alert('Данные успешно импортированы!');
+                        toast.success('Данные успешно импортированы!');
                     } else {
-                        alert('Ошибка импорта данных');
+                        toast.error('Ошибка импорта данных');
                     }
                 };
                 reader.readAsText(file);
@@ -244,7 +244,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                         <span>{match.matchData.date}</span>
                     </div>
                 </div>
-                
+
                 {/* Статус матча */}
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                     match.betResult === 'won' 
@@ -293,7 +293,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                             placeholder="0-0"
                         />
                     </div>
-                    
+
                     {/* Ставка */}
                     <div className="flex items-center gap-2">
                         <label className="text-slate-400 text-xs">Ставка:</label>
@@ -318,7 +318,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                         />
                     </div>
                 </div>
-                
+
                 {/* Кнопки действий */}
                 <div className="flex gap-2">
                     <button
@@ -387,11 +387,11 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={onClose}
             />
-            
+
             {/* Modal */}
             <div className="relative w-full max-w-6xl max-h-[90vh] bg-gradient-to-br from-slate-800/95 to-slate-700/95 rounded-xl border border-slate-600/50 shadow-2xl overflow-hidden">
                 {/* Header */}
@@ -400,7 +400,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                         <h2 className="text-2xl font-bold text-white">Сохраненные матчи</h2>
                         <p className="text-slate-400 text-sm">Управление историей ставок и результатами</p>
                     </div>
-                    
+
                     {/* Close button */}
                     <button
                         onClick={onClose}
@@ -424,7 +424,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                         <button
                             onClick={() => {
                                 saveMatchesToStorage();
-                                alert(`Сохранено ${betService.getAllMatches().length} матчей в localStorage!`);
+                                toast.success(`Сохранено ${betService.getAllMatches().length} матчей в localStorage!`);
                             }}
                             className="px-3 py-2 bg-blue-600/80 hover:bg-blue-600 text-white text-xs rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         >
@@ -436,7 +436,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                                     localStorage.removeItem('saved_matches_history');
                                     betService.clearAllMatches();
                                     loadMatches();
-                                    alert('История очищена!');
+                                    toast.success('История очищена!');
                                 }
                             }}
                             className="px-3 py-2 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500/50"

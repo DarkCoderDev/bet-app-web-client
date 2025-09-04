@@ -5,7 +5,7 @@ import { TablePage } from "../pages/table/table-page.tsx";
 import { FinanceManagerPage } from "../pages/finance-manager-page";
 import type {Match} from "entities/match/types.ts";
 import { getDataSet } from "entities/match/api.ts";
-import {Navigation} from "components/navigation.tsx";
+import {Toaster} from "react-hot-toast";
 
 export const App = () => {
     const [matches, setMatches] = React.useState<Match[] | null>(null);
@@ -80,6 +80,7 @@ export const App = () => {
                     </Routes>
                 </div>
             </div>
+            <Toaster position="top-right" />
         </Router>
     );
 }
