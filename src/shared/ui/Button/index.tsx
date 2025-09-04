@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type {ReactNode} from "react";
 import clsx from 'clsx';
 
 type ButtonProps = {
@@ -23,6 +23,7 @@ export const Button = ({
                            className,
                            type = "button",
                            disabled = false,
+                           ...otherProps
                        }: ButtonProps) => {
     const baseStyles =
         "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -46,6 +47,7 @@ export const Button = ({
             onClick={onClick}
             disabled={disabled}
             className={clsx(baseStyles, variants[variant], sizes[size], className)}
+            {...otherProps}
         >
             {iconLeft && <span className="mr-2">{iconLeft}</span>}
             {children}

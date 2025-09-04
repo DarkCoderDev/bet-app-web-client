@@ -14,9 +14,11 @@ import {signatures} from "entities/filter/signatures.ts";
 import {calculateBetResult, includesText, renderClean} from './lib';
 import {BetManagementService} from "entities/match/bet-management.ts";
 import {SavedMatchesModal} from "components/saved-matches.tsx";
-import {FinancialAnalysis} from "features/odds-table/modules/financial-analysis";
 import {Controls} from "features/odds-table/modules/controls";
 import clsx from "clsx";
+import {Button} from "shared/ui/Button";
+import {EmptyData} from "features/odds-table/ui/emptyData.tsx";
+import {Pagination} from "features/odds-table/ui/pagination.tsx";
 
 const columnHelper = createColumnHelper<Match>();
 
@@ -453,36 +455,34 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     );
 
     const financialResults = useMemo(() => {
-        if (allRows.length < 1000) {
-            const totals: Record<string, number> = {
-                "ТБ2.5": 0,
-                "ТБ3": 0,
-                "ТМ2.5": 0,
-                "ТМ3": 0,
-                "Ф1(0)": 0,
-                "Ф2(0)": 0,
-                "Х": 0,
-                "Оз-да": 0,
-                "Оз-нет": 0,
-                "П1": 0,
-                "П2": 0,
-            };
+        const totals: Record<string, number> = {
+            "ТБ2.5": 0,
+            "ТБ3": 0,
+            "ТМ2.5": 0,
+            "ТМ3": 0,
+            "Ф1(0)": 0,
+            "Ф2(0)": 0,
+            "Х": 0,
+            "Оз-да": 0,
+            "Оз-нет": 0,
+            "П1": 0,
+            "П2": 0,
+        };
 
-            allRows.forEach((row) => {
-                row.getVisibleCells().forEach((cell) => {
-                    if (cell.column.id in totals) {
-                        const coef = Number(cell.getValue());
-                        const isWin = getBetResultForCell(cell.column.id, row.original);
-                        if (!isNaN(coef)) {
-                            totals[cell.column.id] += isWin ? coef - 1 : -1;
-                        }
+        pageMatches.forEach((row) => {
+            row.getVisibleCells().forEach((cell) => {
+                if (cell.column.id in totals) {
+                    const coef = Number(cell.getValue());
+                    const isWin = getBetResultForCell(cell.column.id, row.original);
+                    if (!isNaN(coef)) {
+                        totals[cell.column.id] += isWin ? coef - 1 : -1;
                     }
-                });
+                }
             });
+        });
 
-            return totals;
-        }
-    }, [allRows]);
+        return totals;
+    }, [pageMatches]);
 
     console.log(financialResults)
 
@@ -505,7 +505,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                     )) : null}
                 </div>
 
-                <FinancialAnalysis/>
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
                     <div className="max-h-[100%] overflow-y-auto border border-slate-700 rounded-lg">
@@ -608,8 +607,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     </div>
                                                 ) : cell.column.id === 'Действия' ? (
                                                     <div className="flex gap-1 justify-center">
-                                                        <button
-                                                            className="px-1 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-all duration-200"
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleToggleHighlight(match.original);
@@ -617,9 +617,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             title={isHighlighted ? "Убрать подсветку" : "Подсветить строку"}
                                                         >
                                                             {isHighlighted ? "✅" : "✏️"}
-                                                        </button>
-                                                        <button
-                                                            className="px-1 py-0.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-all duration-200"
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleSaveMatch(match.original);
@@ -627,7 +627,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             title="Сохранить матч"
                                                         >
                                                             💾
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 ) : (
                                                     <div
@@ -650,65 +650,15 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                 );
                             })}
                             {pageMatches.length === 0 && (
-                                <tr>
-                                    <td colSpan={columns.length}
-                                        className="p-8 text-center text-slate-400 text-lg">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div
-                                                className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-slate-500" fill="none"
-                                                     stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                          d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"/>
-                                                </svg>
-                                            </div>
-                                            <span>Ничего не найдено</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <EmptyData columnsLength={columns.length}/>
                             )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                      {/* Пагинация - прибита к низу */}
-<div
-  className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-4 py-1 border-t border-white/10 flex-shrink-0">
-  <div className="flex flex-row sm:flex-Match gap-2 items-center justify-center">
-    <button
-      onClick={() => setPageIndex(0)}
-      disabled={pageIndex === 0}
-      className="w-8 h-8 flex items-center justify-center bg-slate-700/50 border border-slate-600 rounded-lg text-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-    >
-      «
-    </button>
-    <button
-      onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-      disabled={pageIndex === 0}
-      className="w-8 h-8 flex items-center justify-center bg-slate-700/50 border border-slate-600 rounded-lg text-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-    >
-      ‹
-    </button>
-    <span className="px-3 py-1 bg-slate-700/50 rounded-lg border border-slate-600 text-white text-xs font-medium">
-      {pageIndex + 1} / {pageCount}
-    </span>
-    <button
-      onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-      disabled={pageIndex >= pageCount - 1}
-      className="w-8 h-8 flex items-center justify-center bg-slate-700/50 border border-slate-600 rounded-lg text-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-    >
-      ›
-    </button>
-    <button
-      onClick={() => setPageIndex(pageCount - 1)}
-      disabled={pageIndex >= pageCount - 1}
-      className="w-8 h-8 flex items-center justify-center bg-slate-700/50 border border-slate-600 rounded-lg text-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-slate-300 enabled:bg-slate-700 enabled:text-white enabled:cursor-pointer enabled:hover:bg-slate-600 enabled:hover:border-slate-500 transform hover:scale-105 active:scale-95"
-    >
-      »
-    </button>
-  </div>
-</div>
+
+                <Pagination setPageIndex={setPageIndex} pageCount={pageCount} pageIndex={pageIndex}/>
 
 
                 {/* Модалка сохраненных матчей */}
