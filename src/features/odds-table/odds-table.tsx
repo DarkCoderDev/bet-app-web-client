@@ -456,17 +456,17 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     const financialResults = useMemo(() => {
         const totals: Record<string, number> = {
-            "ТБ2.5": 0,
-            "ТБ3": 0,
-            "ТМ2.5": 0,
-            "ТМ3": 0,
+            "П1": 0,
+            "Х": 0,
+            "П2": 0,
             "Ф1(0)": 0,
             "Ф2(0)": 0,
-            "Х": 0,
+            "ТБ2.5": 0,
+            "ТМ2.5": 0,
+            "ТБ3": 0,
+            "ТМ3": 0,
             "Оз-да": 0,
             "Оз-нет": 0,
-            "П1": 0,
-            "П2": 0,
         };
 
         pageMatches.forEach((row) => {
@@ -498,11 +498,21 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 <Controls rowCount={allRows.length} setColumnFilters={setColumnFilters}
                           setFilterInputs={setFilterInputs} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
                           setSearchParams={setSearchParams}/>
-                <div className="flex gap-2 px-2 py-1">
-                    {financialResults ? Object.entries(financialResults).map(([key, value]) => (
-                        <div className={clsx([value > 0 ? 'bg-green-200' : 'bg-red-300', 'p-2'])}><span
-                            className="font-bold text-xs">{key}</span>:{value.toFixed(2)}</div>
-                    )) : null}
+                <div className="flex flex-wrap gap-2 px-2 py-1">
+                    {financialResults
+                        ? Object.entries(financialResults).map(([key, value]) => (
+                            <div
+                                key={key}
+                                className={clsx(
+                                    value > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800",
+                                    "px-3 py-1 rounded-lg  text-sm flex items-center gap-1"
+                                )}
+                            >
+                                <span className="font-medium">{key}</span>
+                                <span className="font-bold">{value.toFixed(2)}</span>
+                            </div>
+                        ))
+                        : null}
                 </div>
 
                 {/* Таблица - занимает всю доступную высоту */}
@@ -630,8 +640,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         </Button>
                                                     </div>
                                                 ) : (
-                                                    <div
-                                                        className="group-hover:scale-105 transition-transform duration-200 truncate overflow-hidden text-ellipsis whitespace-nowrap">
+                                                    <div>
                                                         {(() => {
                                                             const betResult = getBetResultForCell(cell.column.id, match.original);
                                                             const value = renderClean(String(cell.getValue() ?? ""));
