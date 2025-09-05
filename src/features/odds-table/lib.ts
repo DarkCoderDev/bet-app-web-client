@@ -2,7 +2,6 @@
 import type {FilterFn} from "@tanstack/react-table";
 import type {Match} from "entities/match/types.ts";
 
-import { RusMatchKeys } from 'entities/match/consts';
 
 export const calculateBetResult = (betType: string, homeScore: number, awayScore: number): boolean => {
     const totalGoals = homeScore + awayScore;
@@ -32,9 +31,68 @@ export const calculateBetResult = (betType: string, homeScore: number, awayScore
 export const stripTags = (html: string) =>
     html.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]*>/g, "").trim();
 
+// Кэш для индексов колонок (избегаем повторных вычислений)
+const columnIndexCache = new Map<string, number>();
+
+// Оптимизированная функция фильтрации с использованием преднормализованных данных
 export const includesText: FilterFn<Match> = (match, columnId, filterValue) => {
+    // Быстрая проверка на пустое значение фильтра
+    if (!filterValue) return true;
+    
+    // Кэшируем индекс колонки
+    let columnIndex = columnIndexCache.get(columnId);
+    if (columnIndex === undefined) {
+        columnIndex = getColumnIndex(columnId);
+        columnIndexCache.set(columnId, columnIndex);
+    }
+    if (columnIndex === -1) return true;
+    
+    // Данные уже очищены в API, просто сравниваем
+    if (columnIndex >= 0 && match.original) {
+        const value = String(match.original[columnIndex] ?? "");
+        return value.toLowerCase().includes(filterValue.toLowerCase());
+    }
+    
+    // Fallback к старому методу если индекс невалидный
     const v = String(match.getValue(columnId) ?? "");
-    return stripTags(v).toLowerCase().includes(String(filterValue ?? "").toLowerCase());
+    return stripTags(v).toLowerCase().includes(filterValue.toLowerCase());
 };
 
-export const renderClean = (v: string) => stripTags(v);
+// Оптимизированная функция очистки - данные уже очищены в API
+export const renderClean = (v: string, columnIndex?: number, match?: Match) => {
+    // Если есть доступ к оригинальным данным и валидный индекс, используем их
+    if (columnIndex !== undefined && columnIndex >= 0 && match) {
+        return String(match[columnIndex] ?? "");
+    }
+    
+    // Fallback к переданному значению (уже должно быть очищено)
+    return v;
+};
+
+// Оптимизированный маппинг названий колонок на индексы (Map быстрее объекта для поиска)
+const columnMap = new Map<string, number>([
+    ['День', 0],
+    ['Лига', 1],
+    ['Дата', 2],
+    ['Счет', 3],
+    ['1 тайм', 4],
+    ['Команды', 5],
+    ['П1', 6],
+    ['Х', 7],
+    ['П2', 8],
+    ['Ф1(0)', 9],
+    ['Ф2(0)', 10],
+    ['1 заб', 11],
+    ['2 заб', 12],
+    ['ТБ2.5', 13],
+    ['ТМ2.5', 14],
+    ['ТБ3', 15],
+    ['ТМ3', 16],
+    ['Оз-да', 17],
+    ['Оз-нет', 18],
+]);
+
+// Вспомогательная функция для получения индекса колонки
+export const getColumnIndex = (columnId: string): number => {
+    return columnMap.get(columnId) ?? -1;
+};

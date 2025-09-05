@@ -42,19 +42,19 @@ export const models = [
 		color: '#2e8b57',
 		btnText: 'м',
 		fields: [
-			{key: 'p1', transform: v => truncate(v, 0)},
-			{key: 'x', transform: v => truncate(v, 0)},
-			{key: 'p2', transform: v => truncate(v, 0)},
-			{key: 'f10', transform: v => truncate(v, 0)},
-			{key: 'f20', transform: v => truncate(v, 0)},
-			{key: '1zab', transform: v => truncate(v, 0)},
-			{key: '2zab', transform: v => truncate(v, 0)},
-			{key: 'tb25', transform: v => truncate(v, 0)},
-			{key: 'tm25', transform: v => truncate(v, 0)},
-			{key: 'Over_3', transform: v => truncate(v, 0)},
-			{key: 'Under_3', transform: v => truncate(v, 0)},
-			{key: 'BTTSyes', transform: v => truncate(v, 0)},
-			{key: 'BTTSno', transform: v => truncate(v, 0)}
+			{key: 'p1', transform: (v: string) => truncate(v, 0)},
+			{key: 'x', transform: (v: string) => truncate(v, 0)},
+			{key: 'p2', transform: (v: string) => truncate(v, 0)},
+			{key: 'f10', transform: (v: string) => truncate(v, 0)},
+			{key: 'f20', transform: (v: string) => truncate(v, 0)},
+			{key: '1zab', transform: (v: string) => truncate(v, 0)},
+			{key: '2zab', transform: (v: string) => truncate(v, 0)},
+			{key: 'tb25', transform: (v: string) => truncate(v, 0)},
+			{key: 'tm25', transform: (v: string) => truncate(v, 0)},
+			{key: 'Over_3', transform: (v: string) => truncate(v, 0)},
+			{key: 'Under_3', transform: (v: string) => truncate(v, 0)},
+			{key: 'BTTSyes', transform: (v: string) => truncate(v, 0)},
+			{key: 'BTTSno', transform: (v: string) => truncate(v, 0)}
 		]
 	},
 	{
@@ -62,9 +62,9 @@ export const models = [
 		color: '#2e3d8b',
 		btnText: 'к',
 		fields: [
-			{key: 'p1', transform: v => truncate(v, 1)},
-			{key: 'x', transform: v => truncate(v, 1)},
-			{key: 'p2', transform: v => truncate(v, 1)},
+			{key: 'p1', transform: (v: string) => truncate(v, 1)},
+			{key: 'x', transform: (v: string) => truncate(v, 1)},
+			{key: 'p2', transform: (v: string) => truncate(v, 1)},
 		]
 	},
 	{
@@ -72,19 +72,19 @@ export const models = [
 		color: '#8b2e31',
 		btnText: 'т',
 		fields: [
-			{key: 'p1', transform: v => truncate(v, 0)},
-			{key: 'x', transform: v => truncate(v, 0)},
-			{key: 'p2', transform: v => truncate(v, 0)},
-			{key: 'f10', transform: v => truncate(v, 1)},
-			{key: 'f20', transform: v => truncate(v, 1)},
-			{key: '1zab', transform: v => truncate(v, 1)},
-			{key: '2zab', transform: v => truncate(v, 1)},
-			{key: 'tb25', transform: v => truncate(v, 1)},
-			{key: 'tm25', transform: v => truncate(v, 1)},
-			{key: 'Over_3', transform: v => truncate(v, 1)},
-			{key: 'Under_3', transform: v => truncate(v, 1)},
-			{key: 'BTTSyes', transform: v => truncate(v, 1)},
-			{key: 'BTTSno', transform: v => truncate(v, 1)}
+			{key: 'p1', transform: (v: string) => truncate(v, 0)},
+			{key: 'x', transform: (v: string) => truncate(v, 0)},
+			{key: 'p2', transform: (v: string) => truncate(v, 0)},
+			{key: 'f10', transform: (v: string) => truncate(v, 1)},
+			{key: 'f20', transform: (v: string) => truncate(v, 1)},
+			{key: '1zab', transform: (v: string) => truncate(v, 1)},
+			{key: '2zab', transform: (v: string) => truncate(v, 1)},
+			{key: 'tb25', transform: (v: string) => truncate(v, 1)},
+			{key: 'tm25', transform: (v: string) => truncate(v, 1)},
+			{key: 'Over_3', transform: (v: string) => truncate(v, 1)},
+			{key: 'Under_3', transform: (v: string) => truncate(v, 1)},
+			{key: 'BTTSyes', transform: (v: string) => truncate(v, 1)},
+			{key: 'BTTSno', transform: (v: string) => truncate(v, 1)}
 		]
 	}
 ];

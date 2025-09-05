@@ -1,4 +1,4 @@
-import type { Match, SavedMatch, BetManagement } from './types';
+import type { Match, SavedMatch } from './types';
 import { MatchIndexMap, MatchKeys } from './consts';
 
 // Ключи для localStorage
@@ -199,13 +199,6 @@ export class BetManagementService {
         // Формируем ключи для групп
         const groupedMatches: Record<string, SavedMatch[]> = {};
         timeGroups.forEach((group, index) => {
-            const earliestMatch = group.matches.reduce((earliest, current) => {
-                const currentTime = this.parseMatchTime(current.matchData.date);
-                const earliestTime = this.parseMatchTime(earliest.matchData.date);
-                return currentTime < earliestTime ? current : earliest;
-            });
-
-            const dateKey = this.formatMatchDateWithTime(earliestMatch.matchData.date);
             groupedMatches[`group_${index}`] = group.matches;
         });
 
@@ -339,18 +332,6 @@ export class BetManagementService {
         });
     }
 
-    private formatMatchDateWithTime(dateStr: string): string {
-        const date = this.parseMatchDate(dateStr);
-        const timePart = dateStr.split(' ')[1] || '';
-        
-        const formattedDate = date.toLocaleDateString('ru-RU', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
-        
-        return timePart ? `${formattedDate}, ${timePart}` : formattedDate;
-    }
 
     // Синхронизация сохраненных матчей с актуальным датасетом
     public syncSavedMatchesWithDataset(currentDataset: Match[]): void {

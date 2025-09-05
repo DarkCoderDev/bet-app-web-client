@@ -11,7 +11,7 @@ import type {Match} from "entities/match/types.ts";
 import {debounce} from "shared/libs.ts";
 import {MatchIndexMap, RusMatchKeys, MatchKeys} from "entities/match/consts.ts";
 import {signatures} from "entities/filter/signatures.ts";
-import {calculateBetResult, includesText, renderClean} from './lib';
+import {calculateBetResult, includesText, renderClean, getColumnIndex} from './lib';
 import {BetManagementService} from "entities/match/bet-management.ts";
 import {SavedMatchesModal} from "components/saved-matches.tsx";
 import {Controls} from "features/odds-table/modules/controls";
@@ -106,7 +106,7 @@ const columns: ColumnDef<Match, string>[] = [
     ...dataColumns.map(c => columnHelper.accessor(row => row[MatchIndexMap[c.key]], {
         id: c.label,
         header: c.label,
-        cell: ctx => renderClean(String(ctx.getValue() ?? '')),
+        cell: ctx => renderClean(String(ctx.getValue() ?? ''), getColumnIndex(c.label) >= 0 ? getColumnIndex(c.label) : undefined, ctx.row.original),
         filterFn: includesText,
         meta: {widthClass: c.widthClass},
     })),
@@ -359,7 +359,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     // Обработчик сохранения матча
     const handleSaveMatch = React.useCallback((match: Match) => {
         try {
-            const savedMatch = betService.saveMatch(match, filterInputs);
+            betService.saveMatch(match, filterInputs);
 
             // Показываем уведомление (можно заменить на toast)
             toast.success('Матч сохранен в финансовый менеджер!');
@@ -459,14 +459,39 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             "Оз-нет": 0,
         };
 
+        // Предвычисленные индексы для быстрого доступа
+        const scoreIndex = MatchIndexMap[MatchKeys.SCORE];
+        const betIndices = {
+            "П1": MatchIndexMap[MatchKeys.P1],
+            "Х": MatchIndexMap[MatchKeys.X],
+            "П2": MatchIndexMap[MatchKeys.P2],
+            "Ф1(0)": MatchIndexMap[MatchKeys.HANDICAP1_0],
+            "Ф2(0)": MatchIndexMap[MatchKeys.HANDICAP2_0],
+            "1 заб": MatchIndexMap[MatchKeys.ONE_TO_SCORE],
+            "2 заб": MatchIndexMap[MatchKeys.TWO_TO_SCORE],
+            "ТБ2.5": MatchIndexMap[MatchKeys.OVER2_5],
+            "ТМ2.5": MatchIndexMap[MatchKeys.UNDER2_5],
+            "ТБ3": MatchIndexMap[MatchKeys.OVER3],
+            "ТМ3": MatchIndexMap[MatchKeys.UNDER3],
+            "Оз-да": MatchIndexMap[MatchKeys.BTTS_YES],
+            "Оз-нет": MatchIndexMap[MatchKeys.BTTS_NO],
+        };
+
         pageMatches.forEach((row) => {
-            row.getVisibleCells().forEach((cell) => {
-                if (cell.column.id in totals) {
-                    const coef = Number(cell.getValue());
-                    const isWin = getBetResultForCell(cell.column.id, row.original);
-                    if (!isNaN(coef)) {
-                        totals[cell.column.id] += isWin ? coef - 1 : -1;
-                    }
+            const match = row.original;
+            
+            // Проверяем, есть ли счет у матча
+            const score = String(match[scoreIndex] || '');
+            if (!score || score.trim() === '' || score === 'undefined' || score === 'null') {
+                return; // Пропускаем матчи без счета
+            }
+
+            // Прямой доступ к данным по индексам
+            Object.entries(betIndices).forEach(([betType, index]) => {
+                const coef = Number(match[index]);
+                if (!isNaN(coef)) {
+                    const isWin = getBetResultForCell(betType, match);
+                    totals[betType] += isWin ? coef - 1 : -1;
                 }
             });
         });
@@ -575,7 +600,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                 }}
                                                 onClick={() => {
                                                     const value = String(cell.getValue() ?? "");
-                                                    const cleanValue = renderClean(value);
+                                                    const columnIndex = getColumnIndex(cell.column.id);
+                                                    const cleanValue = renderClean(value, columnIndex >= 0 ? columnIndex : undefined, match.original);
                                                     if (cleanValue && cleanValue.trim()) {
                                                         setFilterInputs(prev => ({
                                                             ...prev,
@@ -584,7 +610,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         debouncedSetFilter([cell.column.id, cleanValue.trim()]);
                                                     }
                                                 }}
-                                                title={renderClean(String(cell.getValue() ?? ""))}
+                                                title={renderClean(String(cell.getValue() ?? ""), getColumnIndex(cell.column.id) >= 0 ? getColumnIndex(cell.column.id) : undefined, match.original)}
                                             >
                                                 {cell.column.id === 'Сигнатуры' ? (
                                                     <div className="flex gap-1 justify-center">
@@ -625,7 +651,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     <div>
                                                         {(() => {
                                                             const betResult = getBetResultForCell(cell.column.id, match.original);
-                                                            const value = renderClean(String(cell.getValue() ?? ""));
+                                                            const value = renderClean(String(cell.getValue() ?? ""), getColumnIndex(cell.column.id) >= 0 ? getColumnIndex(cell.column.id) : undefined, match.original);
 
                                                             if (betResult === true) {
                                                                 return <span

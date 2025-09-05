@@ -1,9 +1,11 @@
 import {Button} from "shared/ui/Button";
 
+import type { ColumnFiltersState } from "@tanstack/react-table";
+
 type Props = {
     rowCount: number;
-    setColumnFilters: (filters: any) => void;
-    setFilterInputs: (filters: any) => void;
+    setColumnFilters: (filters: ColumnFiltersState) => void;
+    setFilterInputs: (filters: Record<string, string>) => void;
     setIsSavedMatchesModalOpen: (open: boolean) => void;
     setSearchParams: (params: URLSearchParams) => void;
 }

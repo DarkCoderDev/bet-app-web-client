@@ -154,7 +154,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
             Object.entries(filterValues).forEach(([key, value]) => {
                 if (value && value.trim() !== '') {
                     // Находим соответствующий английский ключ для русского названия
-                    const englishKey = Object.entries(RusMatchKeys).find(([engKey, rusName]) => rusName === key)?.[0];
+                    const englishKey = Object.entries(RusMatchKeys).find(([, rusName]) => rusName === key)?.[0];
                     if (englishKey && englishKey in MatchIndexMap) {
                         const index = MatchIndexMap[englishKey as keyof typeof MatchIndexMap];
                         newSearchParams.set(String(index), value);
@@ -182,17 +182,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         }
     };
 
-    // Экспорт данных
-    const handleExport = () => {
-        const data = betService.exportData();
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `saved-matches-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
 
     // Импорт данных
     const handleImport = () => {

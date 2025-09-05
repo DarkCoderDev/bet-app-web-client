@@ -1,11 +1,9 @@
-import React from "react";
 
 type Props = {
     columnsLength: number;
 }
 
 export const EmptyData = (props: Props) => {
-
     return (
         <tr>
             <td colSpan={props.columnsLength}

@@ -34,8 +34,3 @@ export interface SavedMatch {
     isHighlighted?: boolean; // Подсвечен ли матч в таблице
 }
 
-// Типы для управления ставками
-export interface BetManagement {
-    savedMatches: SavedMatch[];
-    highlightedMatches: Set<string>; // ID подсвеченных матчей
-}
