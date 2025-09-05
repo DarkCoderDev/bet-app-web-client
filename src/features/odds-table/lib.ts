@@ -8,22 +8,29 @@ export const calculateBetResult = (betType: string, homeScore: number, awayScore
     const totalGoals = homeScore + awayScore;
 
     const betResults = {
-        [RusMatchKeys.p1]: () => homeScore > awayScore,
-        [RusMatchKeys.x]: () => homeScore === awayScore,
-        [RusMatchKeys.p2]: () => awayScore > homeScore,
-        [RusMatchKeys.handicap1_0]: () => homeScore > awayScore,
-        [RusMatchKeys.handicap2_0]: () => awayScore > homeScore,
-        [RusMatchKeys.oneToScore]: () => homeScore > 0,
-        [RusMatchKeys.twoToScore]: () => awayScore > 0,
-        [RusMatchKeys.under2_5]: () => totalGoals < 2.5,
-        [RusMatchKeys.over2_5]: () => totalGoals > 2.5,
-        [RusMatchKeys.under3]: () => totalGoals < 3,
-        [RusMatchKeys.over3]: () => totalGoals > 3,
-        [RusMatchKeys.bttsYes]: () => homeScore > 0 && awayScore > 0,
-        [RusMatchKeys.bttsNo]: () => homeScore === 0 || awayScore === 0,
+        'П1': () => homeScore > awayScore,
+        'Х': () => homeScore === awayScore,
+        'П2': () => awayScore > homeScore,
+        'Ф1(0)': () => homeScore > awayScore,
+        'Ф2(0)': () => awayScore > homeScore,
+        '1 заб': () => homeScore > 0,
+        '2 заб': () => awayScore > 0,
+        'ТМ2.5': () => totalGoals < 2.5,
+        'ТБ2.5': () => totalGoals > 2.5,
+        'ТМ3': () => totalGoals < 3,
+        'ТБ3': () => totalGoals > 3,
+        'Оз-да': () => homeScore > 0 && awayScore > 0,
+        'Оз-нет': () => homeScore === 0 || awayScore === 0,
     };
 
-    return betResults[betType as keyof typeof betResults]?.() ?? false;
+    const result = betResults[betType as keyof typeof betResults]?.() ?? false;
+    
+    // Отладочная информация
+    if (betType && (betType === 'П1' || betType === 'Х' || betType === 'П2')) {
+        console.log(`calculateBetResult: ${betType}, score: ${homeScore}-${awayScore}, result: ${result}`);
+    }
+    
+    return result;
 };
 
 

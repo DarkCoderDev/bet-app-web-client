@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo} from "react";
+import React, {useMemo} from "react";
 import {useSearchParams} from "react-router-dom";
 import {
     type ColumnDef,
@@ -462,6 +462,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             "П2": 0,
             "Ф1(0)": 0,
             "Ф2(0)": 0,
+            "1 заб": 0,
+            "2 заб": 0,
             "ТБ2.5": 0,
             "ТМ2.5": 0,
             "ТБ3": 0,
@@ -499,22 +501,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 <Controls rowCount={allRows.length} setColumnFilters={setColumnFilters}
                           setFilterInputs={setFilterInputs} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
                           setSearchParams={setSearchParams}/>
-                <div className="flex flex-wrap gap-2 px-2 py-1">
-                    {financialResults
-                        ? Object.entries(financialResults).map(([key, value]) => (
-                            <div
-                                key={key}
-                                className={clsx(
-                                    value > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800",
-                                    "px-3 py-1 rounded-lg  text-sm flex items-center gap-1"
-                                )}
-                            >
-                                <span className="font-medium">{key}</span>
-                                <span className="font-bold">{value.toFixed(2)}</span>
-                            </div>
-                        ))
-                        : null}
-                </div>
 
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
@@ -537,11 +523,23 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     {h.column.id}
                                                 </div>
                                             ) : (
-                                                <>
+                                                <div className="relative">
                                                     <div
                                                         className="select-none text-blue-300 font-bold mb-1 text-center">
                                                         {h.column.id}
                                                     </div>
+
+                                                    {/* Значение флета над инпутом */}
+                                                    {financialResults && financialResults[h.column.id] !== undefined && (
+                                                        <div className={clsx(
+                                                            "mb-1 px-1 py-0.5 text-xs font-bold rounded-sm text-center",
+                                                            financialResults[h.column.id] > 0 
+                                                                ? "bg-green-500 text-white" 
+                                                                : "bg-red-500 text-white"
+                                                        )}>
+                                                            {financialResults[h.column.id].toFixed(2)}
+                                                        </div>
+                                                    )}
 
                                                     {/* Поле фильтра на всю доступную ширину */}
                                                     <input
@@ -555,7 +553,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         className="w-full px-1 py-0 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                                                         onClick={(e) => e.stopPropagation()}
                                                     />
-                                                </>
+                                                </div>
                                             )}
                                         </th>
                                     ))}
@@ -606,7 +604,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         {signatures.map((signature) => (
                                                             <button
                                                                 key={signature.label}
-                                                                className="px-1 py-0.5 text-white text-xs rounded transition-colors"
+                                                                className="px-1 py-0.5 text-white text-xs rounded transition-colors cursor-pointer hover:opacity-80"
                                                                 style={{
                                                                     backgroundColor: signature.color
                                                                 }}
@@ -621,21 +619,17 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         <Button
                                                             size="sm"
                                                             variant="secondary"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
+                                                            onClick={() => {
                                                                 handleToggleHighlight(match.original);
                                                             }}
-                                                            title={isHighlighted ? "Убрать подсветку" : "Подсветить строку"}
                                                         >
                                                             {isHighlighted ? "✅" : "✏️"}
                                                         </Button>
                                                         <Button
                                                             size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
+                                                            onClick={() => {
                                                                 handleSaveMatch(match.original);
                                                             }}
-                                                            title="Сохранить матч"
                                                         >
                                                             💾
                                                         </Button>
