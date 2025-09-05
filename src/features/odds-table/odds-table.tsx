@@ -525,6 +525,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             onClick={() => {
                                                                 handleToggleHighlight(match.original);
                                                             }}
+                                                            className='cursor-pointer'
                                                         >
                                                             {isHighlighted ? "✅" : "✏️"}
                                                         </Button>
@@ -533,6 +534,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             onClick={() => {
                                                                 handleSaveMatch(match.original);
                                                             }}
+                                                             className='cursor-pointer'
                                                         >
                                                             💾
                                                         </Button>

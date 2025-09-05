@@ -33,10 +33,10 @@ export const Controls = (props: Props) => {
                         Найдено: <span
                         className="text-blue-400 font-bold">{allRows.toLocaleString()}</span>
                     </div>
-                    <Button onClick={handleSaveMatches} variant="success" size="sm" className="text-xs">
+                    <Button onClick={handleSaveMatches} variant="success" size="sm" className="text-xs cursor-pointer">
                         💾 Сохраненные матчи
                     </Button>
-                    <Button onClick={handleReset} variant="danger" size="sm" className="text-xs">
+                    <Button onClick={handleReset} variant="danger" size="sm" className="text-xs cursor-pointer">
                         Сбросить фильтры
                     </Button>
                 </div>
