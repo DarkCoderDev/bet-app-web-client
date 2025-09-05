@@ -25,11 +25,6 @@ export const calculateBetResult = (betType: string, homeScore: number, awayScore
 
     const result = betResults[betType as keyof typeof betResults]?.() ?? false;
     
-    // Отладочная информация
-    if (betType && (betType === 'П1' || betType === 'Х' || betType === 'П2')) {
-        console.log(`calculateBetResult: ${betType}, score: ${homeScore}-${awayScore}, result: ${result}`);
-    }
-    
     return result;
 };
 

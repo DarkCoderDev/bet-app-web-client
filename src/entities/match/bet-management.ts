@@ -351,4 +351,44 @@ export class BetManagementService {
         
         return timePart ? `${formattedDate}, ${timePart}` : formattedDate;
     }
+
+    // Синхронизация сохраненных матчей с актуальным датасетом
+    public syncSavedMatchesWithDataset(currentDataset: Match[]): void {
+        if (!currentDataset || currentDataset.length === 0) {
+            return;
+        }
+
+        // Создаем Map для быстрого поиска матчей в актуальном датасете
+        const datasetMap = new Map<string, Match>();
+        
+        currentDataset.forEach(match => {
+            const teams = String(match[MatchIndexMap[MatchKeys.TEAMS]] || '');
+            const date = String(match[MatchIndexMap[MatchKeys.DATE]] || '');
+            const key = `${teams}_${date}`;
+            datasetMap.set(key, match);
+        });
+
+        // Обновляем сохраненные матчи
+        let hasUpdates = false;
+        
+        this.savedMatches.forEach(savedMatch => {
+            const key = `${savedMatch.matchData.teams}_${savedMatch.matchData.date}`;
+            const currentMatch = datasetMap.get(key);
+            
+            if (currentMatch) {
+                const currentScore = String(currentMatch[MatchIndexMap[MatchKeys.SCORE]] || '');
+                
+                // Обновляем счет только если он не пустой в актуальном датасете
+                if (currentScore && currentScore.trim() !== '') {
+                    savedMatch.matchData.score = currentScore;
+                    hasUpdates = true;
+                }
+            }
+        });
+
+        // Сохраняем изменения, если были обновления
+        if (hasUpdates) {
+            this.saveToStorage();
+        }
+    }
 }

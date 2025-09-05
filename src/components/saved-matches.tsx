@@ -3,14 +3,17 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { BetManagementService } from '../entities/match/bet-management';
 import type { SavedMatch } from '../entities/match/types';
 import { RusMatchKeys, MatchKeys, MatchIndexMap } from '../entities/match/consts';
+import toast from 'react-hot-toast';
+import {renderClean} from "features/odds-table/lib.ts";
 
 interface SavedMatchesModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApplyFilters: (filterValues: Record<string, string>) => void;
+    currentDataset?: any[]; // Актуальный датасет для синхронизации
 }
 
-export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, onClose, onApplyFilters }) => {
+export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, onClose, onApplyFilters, currentDataset }) => {
     const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
     const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
     const [groupedMatches, setGroupedMatches] = useState<Record<string, SavedMatch[]>>({});
@@ -27,8 +30,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
 
     // Функция для обновления URL с query параметрами фильтров
     const updateUrlWithFilters = useCallback((filterValues: Record<string, string>) => {
-        console.log('updateUrlWithFilters called with:', filterValues);
-
         // Создаем копию текущих параметров
         const newSearchParams = new URLSearchParams(searchParams);
 
@@ -44,12 +45,9 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                 if (key in MatchIndexMap) {
                     const index = MatchIndexMap[key as keyof typeof MatchIndexMap];
                     newSearchParams.set(String(index), value);
-                    console.log(`Setting index ${index} = ${value} (for ${key})`);
                 }
             }
         });
-
-        console.log('New search params:', newSearchParams.toString());
 
         // Обновляем URL
         setSearchParams(newSearchParams);
@@ -94,7 +92,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         try {
             const allMatches = betService.getAllMatches();
             localStorage.setItem('saved_matches_history', JSON.stringify(allMatches, null, 2));
-            console.log('Матчи сохранены в localStorage:', allMatches.length);
         } catch (error) {
             console.error('Ошибка сохранения матчей в localStorage:', error);
         }
@@ -130,6 +127,11 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
     }, [savedMatches, updateUrlWithFilters]);
 
     const loadMatches = () => {
+        // Синхронизируем сохраненные матчи с актуальным датасетом
+        if (currentDataset && currentDataset.length > 0) {
+            betService.syncSavedMatchesWithDataset(currentDataset);
+        }
+
         const matches = betService.getMatchesByTab(activeTab);
         const grouped = betService.getGroupedMatches(activeTab);
 
@@ -142,9 +144,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
 
     // Применение сохраненных фильтров
     const handleApplyFilters = (matchId: string) => {
-        console.log('handleApplyFilters called for matchId:', matchId);
         const filterValues = betService.getFilterValues(matchId);
-        console.log('Filter values from service:', filterValues);
 
         if (filterValues) {
             // Создаем URL с фильтрами для главной страницы
@@ -158,7 +158,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                     if (englishKey && englishKey in MatchIndexMap) {
                         const index = MatchIndexMap[englishKey as keyof typeof MatchIndexMap];
                         newSearchParams.set(String(index), value);
-                        console.log(`Setting index ${index} = ${value} (for ${key} -> ${englishKey})`);
                     }
                 }
             });
@@ -166,8 +165,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
             // Переходим на главную страницу с примененными фильтрами
             navigate(`/?${newSearchParams.toString()}`);
             onClose(); // Закрываем модалку
-        } else {
-            console.log('No filter values found for matchId:', matchId);
         }
     };
 
@@ -236,10 +233,10 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
             <div className="flex items-center justify-between mb-3">
                 <div className="flex-1 min-w-0">
                     <h4 className="text-white font-semibold text-sm mb-1 truncate pr-2">
-                        {match.matchData.teams}
+                        {renderClean(match.matchData.teams)}
                     </h4>
                     <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <span>{match.matchData.league}</span>
+                        <span>{renderClean(match.matchData.league)}</span>
                         <span>•</span>
                         <span>{match.matchData.date}</span>
                     </div>
@@ -261,7 +258,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
             <div className="mb-3">
                 <h5 className="text-slate-400 text-xs mb-2 font-medium text-center">Фильтры:</h5>
                 <div className="bg-slate-700/40 border border-slate-500 rounded-lg p-2 shadow-inner">
-                    <div className="flex gap-1 overflow-x-auto">
+                    <div className="flex justify-around gap-1 overflow-x-auto">
                         {Object.entries(match.filterValues).map(([key, value]) => {
                             const rusKey = RusMatchKeys[key as keyof typeof RusMatchKeys] || key;
                             return (
@@ -325,7 +322,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                         onClick={() => handleApplyFilters(match.id)}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     >
-                        Применить
+                        Применить фильтр
                     </button>
                     <button
                         onClick={() => handleDeleteMatch(match.id)}

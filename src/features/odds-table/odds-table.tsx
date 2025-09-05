@@ -87,9 +87,9 @@ const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
     {key: MatchKeys.SCORE, label: RusMatchKeys[MatchKeys.SCORE], widthClass: 'w-13'},
     {key: MatchKeys.FIRST_HALF_SCORE, label: RusMatchKeys[MatchKeys.FIRST_HALF_SCORE], widthClass: 'w-13'},
     {key: MatchKeys.TEAMS, label: RusMatchKeys[MatchKeys.TEAMS], widthClass: 'w-2/12'},
-    {key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: 'w-10'},
-    {key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: 'w-10'},
-    {key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: 'w-10'},
+    {key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: 'w-11'},
+    {key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: 'w-11'},
+    {key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: 'w-11'},
     {key: MatchKeys.HANDICAP1_0, label: RusMatchKeys[MatchKeys.HANDICAP1_0], widthClass: 'w-13'},
     {key: MatchKeys.HANDICAP2_0, label: RusMatchKeys[MatchKeys.HANDICAP2_0], widthClass: 'w-13'},
     {key: MatchKeys.ONE_TO_SCORE, label: RusMatchKeys[MatchKeys.ONE_TO_SCORE], widthClass: 'w-13'},
@@ -114,7 +114,7 @@ const columns: ColumnDef<Match, string>[] = [
         id: 'Сигнатуры',
         header: 'Сигнатуры',
         cell: () => '',
-        meta: {widthClass: 'w-1/12'},
+        meta: {widthClass: 'w-25'},
     }),
     columnHelper.display({
         id: 'Действия',
@@ -215,11 +215,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Дополнительная загрузка фильтров при монтировании компонента
     React.useEffect(() => {
-        console.log('Component mounted, checking URL for filters...');
-
         // Используем window.location.search для получения текущих параметров
         const currentSearch = window.location.search;
-        console.log('Current URL search:', currentSearch);
 
         const urlFilters: Record<string, string> = {};
 
@@ -234,17 +231,13 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                     const columnName = RusMatchKeys[key as keyof typeof RusMatchKeys];
                     if (columnName) {
                         urlFilters[columnName] = value;
-                        console.log(`Found filter: ${columnName} = ${value} (index: ${index})`);
                     }
                 }
             });
         }
 
-        console.log('Total URL filters found:', Object.keys(urlFilters).length);
-
         // Применяем фильтры из URL
         if (Object.keys(urlFilters).length > 0) {
-            console.log('Applying filters from URL:', urlFilters);
             setFilterInputs(urlFilters);
 
             const newColumnFilters: ColumnFiltersState = [];
@@ -254,9 +247,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 }
             });
             setColumnFilters(newColumnFilters);
-            console.log('Column filters set:', newColumnFilters);
-        } else {
-            console.log('No filters found in URL');
         }
     }, []); // Пустой массив зависимостей - срабатывает только при монтировании
 
@@ -370,7 +360,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const handleSaveMatch = React.useCallback((match: Match) => {
         try {
             const savedMatch = betService.saveMatch(match, filterInputs);
-            console.log('Матч сохранен:', savedMatch);
 
             // Показываем уведомление (можно заменить на toast)
             toast.success('Матч сохранен в финансовый менеджер!');
@@ -407,8 +396,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Обработчик применения фильтров
     const handleApplyFilters = (filterValues: Record<string, string>) => {
-        console.log('Применяем фильтры:', filterValues);
-
         // Создаем новые columnFilters из filterValues
         const newColumnFilters: ColumnFiltersState = [];
         Object.entries(filterValues).forEach(([columnId, value]) => {
@@ -487,8 +474,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         return totals;
     }, [pageMatches]);
 
-    console.log(financialResults)
-
     React.useEffect(() => setPageIndex(0), [columnFilters, pageSize]);
 
     return (
@@ -532,9 +517,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     {/* Значение флета над инпутом */}
                                                     {financialResults && financialResults[h.column.id] !== undefined && (
                                                         <div className={clsx(
-                                                            "mb-1 px-1 py-0.5 text-xs font-bold rounded-sm text-center",
-                                                            financialResults[h.column.id] > 0 
-                                                                ? "bg-green-500 text-white" 
+                                                            "mb-1  text-xs font-bold rounded-sm text-center",
+                                                            financialResults[h.column.id] > 0
+                                                                ? "bg-green-500 text-white"
                                                                 : "bg-red-500 text-white"
                                                         )}>
                                                             {financialResults[h.column.id].toFixed(2)}
@@ -569,9 +554,11 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                 return (
                                     <tr
                                         key={match.id}
-                                        className={`h-8 transition-all duration-200 hover:bg-slate-800/30 ${
+                                        className={`h-8 transition-all duration-200 ${
+                                            isHighlighted ? 'bg-yellow-500/20' : 'hover:bg-slate-800/30'
+                                        } ${
                                             matchIndex % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-800/20'
-                                        } ${isHighlighted ? 'bg-yellow-500/20' : ''}`}
+                                        }`}
                                     >
                                         {match.getVisibleCells().map((cell) => (
                                             <td
@@ -604,7 +591,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         {signatures.map((signature) => (
                                                             <button
                                                                 key={signature.label}
-                                                                className="px-1 py-0.5 text-white text-xs rounded transition-colors cursor-pointer hover:opacity-80"
+                                                                className="px-2 p-1 text-white text-xs rounded transition-colors cursor-pointer hover:opacity-80"
                                                                 style={{
                                                                     backgroundColor: signature.color
                                                                 }}
@@ -670,6 +657,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                     isOpen={isSavedMatchesModalOpen}
                     onClose={() => setIsSavedMatchesModalOpen(false)}
                     onApplyFilters={handleApplyFilters}
+                    currentDataset={dataSet}
                 />
             </div>
         </div>
