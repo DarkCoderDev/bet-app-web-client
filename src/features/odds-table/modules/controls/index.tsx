@@ -1,22 +1,20 @@
 import {Button} from "shared/ui/Button";
 
-import type { ColumnFiltersState } from "@tanstack/react-table";
-
 type Props = {
     rowCount: number;
-    setColumnFilters: (filters: ColumnFiltersState) => void;
-    setFilterInputs: (filters: Record<string, string>) => void;
+    setInputs: (filters: Record<string, string>) => void;
+    setAppliedFilters: (filters: Record<string, string>) => void;
     setIsSavedMatchesModalOpen: (open: boolean) => void;
     setSearchParams: (params: URLSearchParams) => void;
 }
 
 export const Controls = (props: Props) => {
 
-    const {rowCount: allRows, setIsSavedMatchesModalOpen, setColumnFilters, setFilterInputs, setSearchParams} = props;
+    const {rowCount: allRows, setIsSavedMatchesModalOpen, setInputs, setAppliedFilters, setSearchParams} = props;
 
     const handleReset = () => {
-        setColumnFilters([]);
-        setFilterInputs({});
+        setInputs({});
+        setAppliedFilters({});
         // Очищаем URL
         setSearchParams(new URLSearchParams());
     }

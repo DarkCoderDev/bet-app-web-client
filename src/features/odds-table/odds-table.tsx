@@ -2,8 +2,7 @@ import React, {useMemo} from "react";
 import {useSearchParams} from "react-router-dom";
 import {
     type ColumnDef,
-    type ColumnFiltersState,
-    getCoreRowModel, getFilteredRowModel,
+    getCoreRowModel,
     createColumnHelper,
     useReactTable
 } from "@tanstack/react-table";
@@ -11,7 +10,7 @@ import type {Match} from "entities/match/types.ts";
 import {debounce} from "shared/libs.ts";
 import {MatchIndexMap, RusMatchKeys, MatchKeys} from "entities/match/consts.ts";
 import {signatures} from "entities/filter/signatures.ts";
-import {calculateBetResult, includesText, renderClean, getColumnIndex} from './lib';
+import {calculateBetResult, renderClean, getColumnIndex} from './lib';
 import {BetManagementService} from "entities/match/bet-management.ts";
 import {SavedMatchesModal} from "components/saved-matches.tsx";
 import {Controls} from "features/odds-table/modules/controls";
@@ -22,6 +21,56 @@ import {Pagination} from "features/odds-table/ui/pagination.tsx";
 import toast from "react-hot-toast";
 
 const columnHelper = createColumnHelper<Match>();
+
+// === Функции для кастомной фильтрации ===
+
+const readFiltersFromURL = (sp: URLSearchParams): Record<string, string> => {
+  const res: Record<string, string> = {};
+  Object.entries(MatchIndexMap).forEach(([key, idx]) => {
+    const v = sp.get(String(idx));
+    if (v) {
+      const label = RusMatchKeys[key as keyof typeof RusMatchKeys];
+      if (label) res[label] = v;
+    }
+  });
+  return res;
+};
+
+const writeFiltersToURL = (
+  filters: Record<string, string>,
+  setSearchParams: ReturnType<typeof useSearchParams>[1]
+) => {
+  const sp = new URLSearchParams();
+  for (const [label, value] of Object.entries(filters)) {
+    const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === label)?.[0];
+    if (!matchKey) continue;
+    const idx = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
+    if (value?.trim()) sp.set(String(idx), value.trim());
+  }
+  setSearchParams(sp);
+};
+
+const applyPredicates = (data: Match[], filters: Record<string, string>): Match[] => {
+  const entries = Object.entries(filters);
+  if (entries.length === 0) return data;
+
+  const compiled = entries.map(([label, raw]) => {
+    const idx = getColumnIndex(label);
+    const q = raw.toLowerCase();
+    return (row: Match) => {
+      const rawValue = String(row[idx] ?? "");
+      const val = renderClean(rawValue, idx, row).toLowerCase();
+      return val.includes(q);
+    };
+  });
+
+  return data.filter(row => {
+    for (let i = 0; i < compiled.length; i++) {
+      if (!compiled[i](row)) return false;
+    }
+    return true;
+  });
+};
 
 // --- Функция получения результата ставки для ячейки
 const getBetResultForCell = (columnId: string, Match: Match): boolean => {
@@ -107,7 +156,6 @@ const columns: ColumnDef<Match, string>[] = [
         id: c.label,
         header: c.label,
         cell: ctx => renderClean(String(ctx.getValue() ?? ''), getColumnIndex(c.label) >= 0 ? getColumnIndex(c.label) : undefined, ctx.row.original),
-        filterFn: includesText,
         meta: {widthClass: c.widthClass},
     })),
     columnHelper.display({
@@ -126,40 +174,47 @@ const columns: ColumnDef<Match, string>[] = [
 
 export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[] }) {
     const {dataSet} = props;
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [pageIndex, setPageIndex] = React.useState<number>(0);
     const [pageSize] = React.useState<number>(29);
     const [searchParams, setSearchParams] = useSearchParams();
     const [isSavedMatchesModalOpen, setIsSavedMatchesModalOpen] = React.useState(false);
 
-    // Локальное состояние для полей фильтрации
-    const [filterInputs, setFilterInputs] = React.useState<Record<string, string>>({});
+    // Состояния для кастомной фильтрации
+    const [inputs, setInputs] = React.useState<Record<string, string>>({});
+    const [appliedFilters, setAppliedFilters] = React.useState<Record<string, string>>({});
 
     // Сервис управления ставками
     const betService = React.useMemo(() => BetManagementService.getInstance(), []);
 
-    // Функция для обновления URL с фильтрами
-    const updateUrlWithFilters = React.useCallback((filters: Record<string, string>) => {
-        const newSearchParams = new URLSearchParams();
+    // Debounce функция для применения фильтров
+    const debouncedApply = React.useMemo(
+        () => debounce((newFilters: Record<string, string>) => {
+            setAppliedFilters(newFilters);
+            writeFiltersToURL(newFilters, setSearchParams);
+        }, 300),
+        [setSearchParams]
+    );
 
-        // Добавляем фильтры в URL, используя индексы из MatchIndexMap
-        Object.entries(filters).forEach(([columnName, value]) => {
-            if (value && value.trim() !== '') {
-                // Находим соответствующий индекс для названия колонки
-                const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === columnName)?.[0];
-                if (matchKey && matchKey in MatchIndexMap) {
-                    const index = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
-                    newSearchParams.set(String(index), value);
-                }
-            }
-        });
-
-        // Обновляем URL
-        setSearchParams(newSearchParams);
-    }, [setSearchParams]);
+    // Обработчик изменения инпутов
+    const onInputChange = React.useCallback((columnId: string, value: string) => {
+        const newInputs = { ...inputs, [columnId]: value };
+        setInputs(newInputs);
+        
+        // Применяем debounce для обновления appliedFilters
+        debouncedApply(newInputs);
+    }, [inputs, debouncedApply]);
 
     // Состояние для подсвеченных строк
     const [highlightedRows, setHighlightedRows] = React.useState<Set<string>>(new Set());
+
+    // Загрузка фильтров из URL при монтировании
+    React.useEffect(() => {
+        const urlFilters = readFiltersFromURL(searchParams);
+        if (Object.keys(urlFilters).length > 0) {
+            setInputs(urlFilters);
+            setAppliedFilters(urlFilters);
+        }
+    }, [searchParams]);
 
     // Загрузка подсвеченных строк при монтировании
     React.useEffect(() => {
@@ -182,135 +237,9 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         setHighlightedRows(highlighted);
     }, [dataSet, betService]);
 
-    // Загрузка фильтров из URL при инициализации
-    React.useEffect(() => {
-        const urlFilters: Record<string, string> = {};
-
-        // Загружаем фильтры из query параметров по индексам
-        Object.entries(MatchIndexMap).forEach(([key, index]) => {
-            const value = searchParams.get(String(index));
-            if (value) {
-                // Преобразуем индекс обратно в название колонки для отображения
-                const columnName = RusMatchKeys[key as keyof typeof RusMatchKeys];
-                if (columnName) {
-                    urlFilters[columnName] = value;
-                }
-            }
-        });
-
-        // Применяем фильтры из URL
-        if (Object.keys(urlFilters).length > 0) {
-            setFilterInputs(urlFilters);
-
-            // Создаем columnFilters из URL
-            const newColumnFilters: ColumnFiltersState = [];
-            Object.entries(urlFilters).forEach(([columnId, value]) => {
-                if (value && value.trim() !== '') {
-                    newColumnFilters.push({id: columnId, value: value.trim()});
-                }
-            });
-            setColumnFilters(newColumnFilters);
-        }
-    }, [searchParams]);
-
-    // Дополнительная загрузка фильтров при монтировании компонента
-    React.useEffect(() => {
-        // Используем window.location.search для получения текущих параметров
-        const currentSearch = window.location.search;
-
-        const urlFilters: Record<string, string> = {};
-
-        if (currentSearch) {
-            // Парсим параметры из URL
-            const urlParams = new URLSearchParams(currentSearch);
-
-            // Загружаем фильтры из текущего URL
-            Object.entries(MatchIndexMap).forEach(([key, index]) => {
-                const value = urlParams.get(String(index));
-                if (value) {
-                    const columnName = RusMatchKeys[key as keyof typeof RusMatchKeys];
-                    if (columnName) {
-                        urlFilters[columnName] = value;
-                    }
-                }
-            });
-        }
-
-        // Применяем фильтры из URL
-        if (Object.keys(urlFilters).length > 0) {
-            setFilterInputs(urlFilters);
-
-            const newColumnFilters: ColumnFiltersState = [];
-            Object.entries(urlFilters).forEach(([columnId, value]) => {
-                if (value && value.trim() !== '') {
-                    newColumnFilters.push({id: columnId, value: value.trim()});
-                }
-            });
-            setColumnFilters(newColumnFilters);
-        }
-    }, []); // Пустой массив зависимостей - срабатывает только при монтировании
 
     // refs для расчета доступной высоты
     const tableAreaRef = React.useRef<HTMLDivElement | null>(null);
-
-
-    // Batch-система для массовых обновлений фильтров
-    const batchFilters = React.useRef<Map<string, string>>(new Map());
-    const batchTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Начать батч
-    const beginBatch = React.useCallback(() => {
-        batchFilters.current.clear();
-    }, []);
-
-    // Завершить батч
-    const endBatch = React.useCallback(() => {
-        if (batchTimeout.current) {
-            clearTimeout(batchTimeout.current);
-        }
-
-        batchTimeout.current = setTimeout(() => {
-            // Применяем все фильтры из батча
-            const newFilters: ColumnFiltersState = [];
-            batchFilters.current.forEach((value, columnId) => {
-                if (value && value.trim()) {
-                    newFilters.push({id: columnId, value: value.trim()});
-                }
-            });
-
-            setColumnFilters(newFilters);
-
-            // Обновляем URL с новыми фильтрами
-            const newFilterInputs = {...filterInputs};
-            batchFilters.current.forEach((value, columnId) => {
-                if (value && value.trim()) {
-                    newFilterInputs[columnId] = value;
-                }
-            });
-            updateUrlWithFilters(newFilterInputs);
-
-            batchFilters.current.clear();
-        }, 200);
-    }, [filterInputs, updateUrlWithFilters]);
-
-    // Debounced функция для фильтрации (для одиночных обновлений)
-    const debouncedSetFilter = React.useMemo(
-        () => debounce((args: [string, string]) => {
-            const [columnId, value] = args;
-            setColumnFilters(prev => {
-                const newFilters = prev.filter(f => f.id !== columnId);
-                if (value && value.trim()) {
-                    newFilters.push({id: columnId, value: value.trim()});
-                }
-                return newFilters;
-            });
-
-            // Обновляем URL с новыми фильтрами
-            const newFilterInputs = {...filterInputs, [columnId]: value};
-            updateUrlWithFilters(newFilterInputs);
-        }, 300),
-        [filterInputs, updateUrlWithFilters]
-    );
 
     // Универсальный хендлер для сигнатур
     const handleSignatureClick = React.useCallback((signature: typeof signatures[0], match: Match) => {
@@ -318,18 +247,12 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         const coefficientColumns = Object.values(signatureKeyToColumnHeader);
 
         // Очищаем поля ввода
-        setFilterInputs(prev => {
-            const newInputs = {...prev};
-            coefficientColumns.forEach(col => {
-                newInputs[col] = '';
-            });
-            return newInputs;
+        const clearedInputs = {...inputs};
+        coefficientColumns.forEach(col => {
+            clearedInputs[col] = '';
         });
 
         // Применяем трансформации из сигнатуры
-        const newFilterInputs: Record<string, string> = {};
-        const newBatchFilters: Map<string, string> = new Map();
-
         signature.fields.forEach(field => {
             const columnHeader = signatureKeyToColumnHeader[field.key];
             if (columnHeader) {
@@ -338,28 +261,20 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 if (columnIndex !== -1) {
                     const value = String(match[MatchIndexMap[dataColumns[columnIndex].key]] || '');
                     const transformedValue = field.transform(value);
-
-                    newFilterInputs[columnHeader] = transformedValue;
-                    newBatchFilters.set(columnHeader, transformedValue);
+                    clearedInputs[columnHeader] = transformedValue;
                 }
             }
         });
 
-        // Устанавливаем значения в фильтры
-        setFilterInputs(prev => ({...prev, ...newFilterInputs}));
-
-        // Применяем фильтры через batch
-        beginBatch();
-        newBatchFilters.forEach((value, key) => {
-            batchFilters.current.set(key, value);
-        });
-        endBatch();
-    }, [beginBatch, endBatch]);
+        // Устанавливаем новые значения
+        setInputs(clearedInputs);
+        debouncedApply(clearedInputs);
+    }, [inputs, debouncedApply]);
 
     // Обработчик сохранения матча
     const handleSaveMatch = React.useCallback((match: Match) => {
         try {
-            betService.saveMatch(match, filterInputs);
+            betService.saveMatch(match, appliedFilters);
 
             // Показываем уведомление (можно заменить на toast)
             toast.success('Матч сохранен в финансовый менеджер!');
@@ -367,7 +282,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             console.error('Ошибка сохранения матча:', error);
             toast.error('Ошибка сохранения матча');
         }
-    }, [filterInputs, betService]);
+    }, [appliedFilters, betService]);
 
     // Обработчик подсветки строки
     const handleToggleHighlight = React.useCallback((match: Match) => {
@@ -396,43 +311,27 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Обработчик применения фильтров
     const handleApplyFilters = (filterValues: Record<string, string>) => {
-        // Создаем новые columnFilters из filterValues
-        const newColumnFilters: ColumnFiltersState = [];
-        Object.entries(filterValues).forEach(([columnId, value]) => {
-            if (value && value.trim() !== '') {
-                newColumnFilters.push({id: columnId, value: value.trim()});
-            }
-        });
-
-        setColumnFilters(newColumnFilters);
-
-        // Обновляем filterInputs
-        setFilterInputs(filterValues);
-
-        // Обновляем URL
-        updateUrlWithFilters(filterValues);
+        setInputs(filterValues);
+        setAppliedFilters(filterValues);
+        writeFiltersToURL(filterValues, setSearchParams);
     };
+
+    // Применяем кастомную фильтрацию
+    const filteredData = React.useMemo(() => {
+        return applyPredicates(dataSet, appliedFilters);
+    }, [dataSet, appliedFilters]);
 
     // таблица
     const table = useReactTable({
-        data: dataSet,
+        data: filteredData,
         columns,
-        state: {columnFilters},
-        onColumnFiltersChange: (updater) => {
-            const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
-            setColumnFilters(newFilters);
-
-            const newFilterInputs: Record<string, string> = {};
-            newFilters.forEach(filter => {
-                newFilterInputs[filter.id] = String(filter.value || '');
-            });
-            setFilterInputs(newFilterInputs);
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        filterFns: {includesText},
-        enableColumnFilters: true,
     });
+
+    // Сброс pageIndex при изменении фильтров
+    React.useEffect(() => {
+        setPageIndex(0);
+    }, [appliedFilters]);
 
     // пагинация
     const allRows = table.getRowModel().rows;
@@ -499,7 +398,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         return totals;
     }, [pageMatches]);
 
-    React.useEffect(() => setPageIndex(0), [columnFilters, pageSize]);
 
     return (
         <div className="h-full flex flex-col">
@@ -508,8 +406,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                 className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col h-full">
 
 
-                <Controls rowCount={allRows.length} setColumnFilters={setColumnFilters}
-                          setFilterInputs={setFilterInputs} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
+                <Controls rowCount={allRows.length} setInputs={setInputs}
+                          setAppliedFilters={setAppliedFilters} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
                           setSearchParams={setSearchParams}/>
 
                 {/* Таблица - занимает всю доступную высоту */}
@@ -553,12 +451,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                                                     {/* Поле фильтра на всю доступную ширину */}
                                                     <input
-                                                        value={filterInputs[h.column.id] || ""}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            setFilterInputs(prev => ({...prev, [h.column.id]: value}));
-                                                            debouncedSetFilter([h.column.id, value]);
-                                                        }}
+                                                        value={inputs[h.column.id] || ""}
+                                                        onChange={(e) => onInputChange(h.column.id, e.target.value)}
                                                         placeholder={`${h.column.id}`}
                                                         className="w-full px-1 py-0 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                                                         onClick={(e) => e.stopPropagation()}
@@ -603,11 +497,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     const columnIndex = getColumnIndex(cell.column.id);
                                                     const cleanValue = renderClean(value, columnIndex >= 0 ? columnIndex : undefined, match.original);
                                                     if (cleanValue && cleanValue.trim()) {
-                                                        setFilterInputs(prev => ({
-                                                            ...prev,
-                                                            [cell.column.id]: cleanValue.trim()
-                                                        }));
-                                                        debouncedSetFilter([cell.column.id, cleanValue.trim()]);
+                                                        onInputChange(cell.column.id, cleanValue.trim());
                                                     }
                                                 }}
                                                 title={renderClean(String(cell.getValue() ?? ""), getColumnIndex(cell.column.id) >= 0 ? getColumnIndex(cell.column.id) : undefined, match.original)}
