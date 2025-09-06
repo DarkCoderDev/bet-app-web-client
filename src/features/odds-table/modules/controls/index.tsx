@@ -6,15 +6,23 @@ type Props = {
     setAppliedFilters: (filters: Record<string, string>) => void;
     setIsSavedMatchesModalOpen: (open: boolean) => void;
     setSearchParams: (params: URLSearchParams) => void;
+    setHighlightedRows?: (rows: Set<string>) => void;
+    debouncedApply?: { cancel: () => void };
 }
 
 export const Controls = (props: Props) => {
 
-    const {rowCount: allRows, setIsSavedMatchesModalOpen, setInputs, setAppliedFilters, setSearchParams} = props;
+    const {rowCount: allRows, setIsSavedMatchesModalOpen, setInputs, setAppliedFilters, setSearchParams, setHighlightedRows, debouncedApply} = props;
 
     const handleReset = () => {
+        // Отменяем pending debounce операции
+        debouncedApply?.cancel();
+        
+        // Очищаем все состояния
         setInputs({});
         setAppliedFilters({});
+        setHighlightedRows?.(new Set());
+        
         // Очищаем URL
         setSearchParams(new URLSearchParams());
     }

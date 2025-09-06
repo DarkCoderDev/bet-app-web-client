@@ -205,6 +205,13 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         [setSearchParams]
     );
 
+    // Cleanup для debounce при размонтировании
+    React.useEffect(() => {
+        return () => {
+            debouncedApply.cancel();
+        };
+    }, [debouncedApply]);
+
     // Обработчик изменения инпутов
     const onInputChange = React.useCallback((columnId: string, value: string) => {
         setInputs(prevInputs => {
@@ -425,7 +432,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                 <Controls rowCount={allRows.length} setInputs={setInputs}
                           setAppliedFilters={setAppliedFilters} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
-                          setSearchParams={setSearchParams}/>
+                          setSearchParams={setSearchParams} setHighlightedRows={setHighlightedRows}
+                          debouncedApply={debouncedApply}/>
 
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
