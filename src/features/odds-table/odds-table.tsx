@@ -197,12 +197,12 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const betService = React.useMemo(() => BetManagementService.getInstance(), []);
 
     // Debounce функция для применения фильтров
-    const debouncedApply = React.useMemo(
-        () => debounce((newFilters: Record<string, string>) => {
-            setAppliedFilters(newFilters);
-            writeFiltersToURL(newFilters, setSearchParams);
-        }, 300),
-        [setSearchParams]
+    const debouncedApply = React.useCallback(
+      debounce((newFilters: Record<string, string>) => {
+        setAppliedFilters(newFilters);
+        writeFiltersToURL(newFilters, setSearchParams);
+      }, 300),
+      [] 
     );
 
     // Cleanup для debounce при размонтировании
@@ -319,7 +319,16 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             highlightedRows.add(matchKey);
         }
 
-        setHighlightedRows(new Set(highlightedRows));
+      setHighlightedRows((prev) => {
+        const updated = new Set(prev);
+        if (updated.has(matchKey)) {
+          updated.delete(matchKey);
+        } else {
+          updated.add(matchKey);
+        }
+        return updated;
+      });
+
 
         // Сохраняем в сервис
         const savedMatches = betService.getSavedMatches();
