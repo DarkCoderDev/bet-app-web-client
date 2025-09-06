@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BetManagementService } from '../entities/match/bet-management';
-import type { SavedMatch } from '../entities/match/types';
+import type { SavedMatch, Match } from '../entities/match/types';
 import { RusMatchKeys, MatchKeys, MatchIndexMap, FILTER_ORDER } from '../entities/match/consts';
 import toast from 'react-hot-toast';
 
@@ -9,7 +9,7 @@ interface SavedMatchesModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApplyFilters: (filterValues: Record<string, string>) => void;
-    currentDataset?: any[]; // Актуальный датасет для синхронизации
+    currentDataset?: Match[]; // Актуальный датасет для синхронизации
 }
 
 export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, onClose, onApplyFilters, currentDataset }) => {
@@ -49,22 +49,34 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         setSearchParams(newSearchParams);
     }, [setSearchParams]);
 
-    // Загрузка данных при изменении таба
-    useEffect(() => {
-        if (isOpen) {
-            loadMatches();
+    // Функция для сохранения матчей в localStorage
+    const saveMatchesToStorage = useCallback(() => {
+        try {
+            const allMatches = betService.getAllMatches();
+            localStorage.setItem('saved_matches_history', JSON.stringify(allMatches, null, 2));
+        } catch (error) {
+            console.error('Ошибка сохранения матчей в localStorage:', error);
         }
-    }, [activeTab, isOpen]);
+    }, [betService]);
 
-    // Загрузка сохраненных матчей из localStorage при инициализации
-    useEffect(() => {
-        if (isOpen) {
-            loadSavedMatchesFromStorage();
+    const loadMatches = useCallback(() => {
+        // Синхронизируем сохраненные матчи с актуальным датасетом
+        if (currentDataset && currentDataset.length > 0) {
+            betService.syncSavedMatchesWithDataset(currentDataset);
         }
-    }, [isOpen]);
+
+        const matches = betService.getMatchesByTab(activeTab);
+        const grouped = betService.getGroupedMatches(activeTab);
+
+        setSavedMatches(matches);
+        setGroupedMatches(grouped);
+
+        // Автоматически сохраняем в localStorage при изменении
+        saveMatchesToStorage();
+    }, [currentDataset, activeTab, betService, saveMatchesToStorage]);
 
     // Функция для загрузки сохраненных матчей из localStorage
-    const loadSavedMatchesFromStorage = () => {
+    const loadSavedMatchesFromStorage = useCallback(() => {
         try {
             const savedData = localStorage.getItem('saved_matches_history');
             if (savedData) {
@@ -81,17 +93,21 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         } catch (error) {
             console.error('Ошибка загрузки сохраненных матчей из localStorage:', error);
         }
-    };
+    }, [betService, loadMatches]);
 
-    // Функция для сохранения матчей в localStorage
-    const saveMatchesToStorage = () => {
-        try {
-            const allMatches = betService.getAllMatches();
-            localStorage.setItem('saved_matches_history', JSON.stringify(allMatches, null, 2));
-        } catch (error) {
-            console.error('Ошибка сохранения матчей в localStorage:', error);
+    // Загрузка данных при изменении таба
+    useEffect(() => {
+        if (isOpen) {
+            loadMatches();
         }
-    };
+    }, [activeTab, isOpen, loadMatches]);
+
+    // Загрузка сохраненных матчей из localStorage при инициализации
+    useEffect(() => {
+        if (isOpen) {
+            loadSavedMatchesFromStorage();
+        }
+    }, [isOpen, loadSavedMatchesFromStorage]);
 
     // Загрузка фильтров из URL при инициализации и изменении searchParams
     useEffect(() => {
@@ -122,22 +138,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         }
     }, [savedMatches, updateUrlWithFilters]);
 
-    const loadMatches = () => {
-        // Синхронизируем сохраненные матчи с актуальным датасетом
-        if (currentDataset && currentDataset.length > 0) {
-            betService.syncSavedMatchesWithDataset(currentDataset);
-        }
-
-        const matches = betService.getMatchesByTab(activeTab);
-        const grouped = betService.getGroupedMatches(activeTab);
-
-        setSavedMatches(matches);
-        setGroupedMatches(grouped);
-
-        // Автоматически сохраняем в localStorage при изменении
-        saveMatchesToStorage();
-    };
-
     // Применение сохраненных фильтров
     const handleApplyFilters = (matchId: string) => {
         const filterValues = betService.getFilterValues(matchId);
@@ -152,7 +152,7 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
     };
 
     // Обновление матча
-    const handleUpdateMatch = (matchId: string, field: keyof SavedMatch, value: any) => {
+    const handleUpdateMatch = (matchId: string, field: keyof SavedMatch, value: string | number | boolean) => {
         betService.updateMatch(matchId, { [field]: value });
         loadMatches(); // Перезагружаем данные
     };

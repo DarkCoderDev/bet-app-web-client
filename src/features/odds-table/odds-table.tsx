@@ -69,7 +69,7 @@ const applyPredicates = (data: Match[], filters: Record<string, string>): Match[
     const q = raw.toLowerCase();
     return (row: Match) => {
       const rawValue = String(row[idx] ?? "");
-      const val = renderClean(rawValue, idx, row).toLowerCase();
+      const val = renderClean(rawValue).toLowerCase();
       return val.includes(q);
     };
   });
@@ -165,7 +165,7 @@ const columns: ColumnDef<Match, string>[] = [
     ...dataColumns.map(c => columnHelper.accessor(row => row[MatchIndexMap[c.key]], {
         id: c.label,
         header: c.label,
-        cell: ctx => renderClean(String(ctx.getValue() ?? ''), getColumnIndex(c.label) >= 0 ? getColumnIndex(c.label) : undefined, ctx.row.original),
+        cell: ctx => renderClean(String(ctx.getValue() ?? '')),
         meta: {widthClass: c.widthClass},
     })),
     columnHelper.display({
@@ -511,13 +511,12 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                 }}
                                                 onClick={() => {
                                                     const value = String(cell.getValue() ?? "");
-                                                    const columnIndex = getColumnIndex(cell.column.id);
-                                                    const cleanValue = renderClean(value, columnIndex >= 0 ? columnIndex : undefined, match.original);
+                                                    const cleanValue = renderClean(value);
                                                     if (cleanValue && cleanValue.trim()) {
                                                         onInputChange(cell.column.id, cleanValue.trim());
                                                     }
                                                 }}
-                                                title={renderClean(String(cell.getValue() ?? ""), getColumnIndex(cell.column.id) >= 0 ? getColumnIndex(cell.column.id) : undefined, match.original)}
+                                                title={renderClean(String(cell.getValue() ?? ""))}
                                             >
                                                 {cell.column.id === 'Сигнатуры' ? (
                                                     <div className="flex gap-1 justify-center">
