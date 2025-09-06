@@ -197,13 +197,20 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const betService = React.useMemo(() => BetManagementService.getInstance(), []);
 
     // Debounce функция для применения фильтров
-    const debouncedApply = React.useMemo(
-        () => debounce((newFilters: Record<string, string>) => {
-            setAppliedFilters(newFilters);
-            writeFiltersToURL(newFilters, setSearchParams);
-        }, 300),
-        [setSearchParams]
+    const debouncedApply = React.useCallback(
+      debounce((newFilters: Record<string, string>) => {
+        setAppliedFilters(newFilters);
+        writeFiltersToURL(newFilters, setSearchParams);
+      }, 300),
+      [] 
     );
+
+    // Cleanup для debounce при размонтировании
+    React.useEffect(() => {
+        return () => {
+            debouncedApply.cancel();
+        };
+    }, [debouncedApply]);
 
     // Обработчик изменения инпутов
     const onInputChange = React.useCallback((columnId: string, value: string) => {
@@ -312,7 +319,16 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
             highlightedRows.add(matchKey);
         }
 
-        setHighlightedRows(new Set(highlightedRows));
+      setHighlightedRows((prev) => {
+        const updated = new Set(prev);
+        if (updated.has(matchKey)) {
+          updated.delete(matchKey);
+        } else {
+          updated.add(matchKey);
+        }
+        return updated;
+      });
+
 
         // Сохраняем в сервис
         const savedMatches = betService.getSavedMatches();
@@ -425,7 +441,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                 <Controls rowCount={allRows.length} setInputs={setInputs}
                           setAppliedFilters={setAppliedFilters} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
-                          setSearchParams={setSearchParams}/>
+                          setSearchParams={setSearchParams} setHighlightedRows={setHighlightedRows}
+                          debouncedApply={debouncedApply}/>
 
                 {/* Таблица - занимает всю доступную высоту */}
                 <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
