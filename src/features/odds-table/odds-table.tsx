@@ -197,12 +197,15 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Обработчик изменения инпутов
     const onInputChange = React.useCallback((columnId: string, value: string) => {
-        const newInputs = { ...inputs, [columnId]: value };
-        setInputs(newInputs);
-        
-        // Применяем debounce для обновления appliedFilters
-        debouncedApply(newInputs);
-    }, [inputs, debouncedApply]);
+        setInputs(prevInputs => {
+            const newInputs = { ...prevInputs, [columnId]: value };
+            
+            // Применяем debounce для обновления appliedFilters
+            debouncedApply(newInputs);
+            
+            return newInputs;
+        });
+    }, [debouncedApply]);
 
     // Состояние для подсвеченных строк
     const [highlightedRows, setHighlightedRows] = React.useState<Set<string>>(new Set());
@@ -244,33 +247,36 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Универсальный хендлер для сигнатур
     const handleSignatureClick = React.useCallback((signature: typeof signatures[0], match: Match) => {
-        // Сначала очищаем все фильтры коэффициентов
-        const coefficientColumns = Object.values(signatureKeyToColumnHeader);
+        setInputs(prevInputs => {
+            // Сначала очищаем все фильтры коэффициентов
+            const coefficientColumns = Object.values(signatureKeyToColumnHeader);
 
-        // Очищаем поля ввода
-        const clearedInputs = {...inputs};
-        coefficientColumns.forEach(col => {
-            clearedInputs[col] = '';
-        });
+            // Очищаем поля ввода
+            const clearedInputs = {...prevInputs};
+            coefficientColumns.forEach(col => {
+                clearedInputs[col] = '';
+            });
 
-        // Применяем трансформации из сигнатуры
-        signature.fields.forEach(field => {
-            const columnHeader = signatureKeyToColumnHeader[field.key];
-            if (columnHeader) {
-                // Получаем значение из строки по индексу колонки
-                const columnIndex = dataColumns.findIndex(col => col.label === columnHeader);
-                if (columnIndex !== -1) {
-                    const value = String(match[MatchIndexMap[dataColumns[columnIndex].key]] || '');
-                    const transformedValue = field.transform(value);
-                    clearedInputs[columnHeader] = transformedValue;
+            // Применяем трансформации из сигнатуры
+            signature.fields.forEach(field => {
+                const columnHeader = signatureKeyToColumnHeader[field.key];
+                if (columnHeader) {
+                    // Получаем значение из строки по индексу колонки
+                    const columnIndex = dataColumns.findIndex(col => col.label === columnHeader);
+                    if (columnIndex !== -1) {
+                        const value = String(match[MatchIndexMap[dataColumns[columnIndex].key]] || '');
+                        const transformedValue = field.transform(value);
+                        clearedInputs[columnHeader] = transformedValue;
+                    }
                 }
-            }
-        });
+            });
 
-        // Устанавливаем новые значения
-        setInputs(clearedInputs);
-        debouncedApply(clearedInputs);
-    }, [inputs, debouncedApply]);
+            // Применяем debounce для обновления appliedFilters
+            debouncedApply(clearedInputs);
+            
+            return clearedInputs;
+        });
+    }, [debouncedApply]);
 
     // Обработчик сохранения матча
     const handleSaveMatch = React.useCallback((match: Match) => {
@@ -544,7 +550,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                     <div>
                                                         {(() => {
                                                             const betResult = getBetResultForCell(cell.column.id, match.original);
-                                                            const value = renderClean(String(cell.getValue() ?? ""), getColumnIndex(cell.column.id) >= 0 ? getColumnIndex(cell.column.id) : undefined, match.original);
+                                                            const value = renderClean(String(cell.getValue() ?? ""));
 
                                                             if (betResult === true) {
                                                                 return <span

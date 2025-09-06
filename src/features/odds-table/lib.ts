@@ -28,8 +28,6 @@ export const calculateBetResult = (betType: string, homeScore: number, awayScore
 };
 
 
-export const stripTags = (html: string) =>
-    html.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]*>/g, "").trim();
 
 // Кэш для индексов колонок (избегаем повторных вычислений)
 const columnIndexCache = new Map<string, number>();
@@ -53,19 +51,13 @@ export const includesText: FilterFn<Match> = (match, columnId, filterValue) => {
         return value.toLowerCase().includes(filterValue.toLowerCase());
     }
     
-    // Fallback к старому методу если индекс невалидный
+    // Fallback к простому сравнению если индекс невалидный
     const v = String(match.getValue(columnId) ?? "");
-    return stripTags(v).toLowerCase().includes(filterValue.toLowerCase());
+    return v.toLowerCase().includes(filterValue.toLowerCase());
 };
 
-// Оптимизированная функция очистки - данные уже очищены в API
-export const renderClean = (v: string, columnIndex?: number, match?: Match) => {
-    // Если есть доступ к оригинальным данным и валидный индекс, используем их
-    if (columnIndex !== undefined && columnIndex >= 0 && match) {
-        return String(match[columnIndex] ?? "");
-    }
-    
-    // Fallback к переданному значению (уже должно быть очищено)
+// Функция отображения - данные уже очищены на сервере
+export const renderClean = (v: string) => {
     return v;
 };
 

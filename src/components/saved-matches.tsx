@@ -4,7 +4,6 @@ import { BetManagementService } from '../entities/match/bet-management';
 import type { SavedMatch } from '../entities/match/types';
 import { RusMatchKeys, MatchKeys, MatchIndexMap } from '../entities/match/consts';
 import toast from 'react-hot-toast';
-import {renderClean} from "features/odds-table/lib.ts";
 
 interface SavedMatchesModalProps {
     isOpen: boolean;
@@ -222,10 +221,10 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
             <div className="flex items-center justify-between mb-3">
                 <div className="flex-1 min-w-0">
                     <h4 className="text-white font-semibold text-sm mb-1 truncate pr-2">
-                        {renderClean(match.matchData.teams)}
+                        {match.matchData.teams}
                     </h4>
                     <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <span>{renderClean(match.matchData.league)}</span>
+                        <span>{match.matchData.league}</span>
                         <span>•</span>
                         <span>{match.matchData.date}</span>
                     </div>
