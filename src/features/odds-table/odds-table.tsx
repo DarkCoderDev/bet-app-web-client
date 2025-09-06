@@ -208,13 +208,14 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const [highlightedRows, setHighlightedRows] = React.useState<Set<string>>(new Set());
 
     // Загрузка фильтров из URL при монтировании
-    React.useEffect(() => {
-        const urlFilters = readFiltersFromURL(searchParams);
-        if (Object.keys(urlFilters).length > 0) {
-            setInputs(urlFilters);
-            setAppliedFilters(urlFilters);
-        }
-    }, [searchParams]);
+   React.useEffect(() => {
+     const urlFilters = readFiltersFromURL(searchParams);
+     if (Object.keys(urlFilters).length > 0) {
+       setInputs(urlFilters);
+       setAppliedFilters(urlFilters);
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
 
     // Загрузка подсвеченных строк при монтировании
     React.useEffect(() => {
