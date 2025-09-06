@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import type {Match} from "entities/match/types.ts";
 import {debounce} from "shared/libs.ts";
-import {MatchIndexMap, RusMatchKeys, MatchKeys} from "entities/match/consts.ts";
+import {MatchIndexMap, RusMatchKeys, MatchKeys, FILTER_ORDER} from "entities/match/consts.ts";
 import {signatures} from "entities/filter/signatures.ts";
 import {calculateBetResult, renderClean, getColumnIndex} from './lib';
 import {BetManagementService} from "entities/match/bet-management.ts";
@@ -41,12 +41,22 @@ const writeFiltersToURL = (
   setSearchParams: ReturnType<typeof useSearchParams>[1]
 ) => {
   const sp = new URLSearchParams();
-  for (const [label, value] of Object.entries(filters)) {
-    const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === label)?.[0];
-    if (!matchKey) continue;
-    const idx = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
-    if (value?.trim()) sp.set(String(idx), value.trim());
+  
+  // Используем константу для порядка полей
+  const orderedFields = FILTER_ORDER;
+  
+  // Сохраняем фильтры в определенном порядке
+  for (const label of orderedFields) {
+    const value = filters[label];
+    if (value?.trim()) {
+      const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === label)?.[0];
+      if (matchKey) {
+        const idx = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
+        sp.set(String(idx), value.trim());
+      }
+    }
   }
+  
   setSearchParams(sp);
 };
 

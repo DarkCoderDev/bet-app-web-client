@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { BetManagementService } from '../entities/match/bet-management';
 import type { SavedMatch } from '../entities/match/types';
-import { RusMatchKeys, MatchKeys, MatchIndexMap } from '../entities/match/consts';
+import { RusMatchKeys, MatchKeys, MatchIndexMap, FILTER_ORDER } from '../entities/match/consts';
 import toast from 'react-hot-toast';
 
 interface SavedMatchesModalProps {
@@ -17,7 +17,6 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
     const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
     const [groupedMatches, setGroupedMatches] = useState<Record<string, SavedMatch[]>>({});
     const [searchParams, setSearchParams] = useSearchParams();
-    const navigate = useNavigate();
 
     const betService = BetManagementService.getInstance();
 
@@ -29,28 +28,26 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
 
     // Функция для обновления URL с query параметрами фильтров
     const updateUrlWithFilters = useCallback((filterValues: Record<string, string>) => {
-        // Создаем копию текущих параметров
-        const newSearchParams = new URLSearchParams(searchParams);
+        const newSearchParams = new URLSearchParams();
 
-        // Очищаем существующие параметры фильтров
-        Object.values(MatchKeys).forEach(key => {
-            newSearchParams.delete(key);
-        });
+        // Используем константу для порядка полей
+        const orderedFields = FILTER_ORDER;
 
-        // Добавляем новые значения фильтров, используя индексы
-        Object.entries(filterValues).forEach(([key, value]) => {
+        // Добавляем новые значения фильтров в определенном порядке
+        for (const label of orderedFields) {
+            const value = filterValues[label];
             if (value && value.trim() !== '') {
-                // Находим соответствующий индекс для ключа фильтра
-                if (key in MatchIndexMap) {
-                    const index = MatchIndexMap[key as keyof typeof MatchIndexMap];
-                    newSearchParams.set(String(index), value);
+                const matchKey = Object.entries(RusMatchKeys).find(([, name]) => name === label)?.[0];
+                if (matchKey && matchKey in MatchIndexMap) {
+                    const index = MatchIndexMap[matchKey as keyof typeof MatchIndexMap];
+                    newSearchParams.set(String(index), value.trim());
                 }
             }
-        });
+        }
 
         // Обновляем URL
         setSearchParams(newSearchParams);
-    }, [searchParams, setSearchParams]);
+    }, [setSearchParams]);
 
     // Загрузка данных при изменении таба
     useEffect(() => {
@@ -146,24 +143,11 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
         const filterValues = betService.getFilterValues(matchId);
 
         if (filterValues) {
-            // Создаем URL с фильтрами для главной страницы
-            const newSearchParams = new URLSearchParams();
-
-            // Добавляем фильтры в URL, используя индексы из MatchIndexMap
-            Object.entries(filterValues).forEach(([key, value]) => {
-                if (value && value.trim() !== '') {
-                    // Находим соответствующий английский ключ для русского названия
-                    const englishKey = Object.entries(RusMatchKeys).find(([, rusName]) => rusName === key)?.[0];
-                    if (englishKey && englishKey in MatchIndexMap) {
-                        const index = MatchIndexMap[englishKey as keyof typeof MatchIndexMap];
-                        newSearchParams.set(String(index), value);
-                    }
-                }
-            });
-
-            // Переходим на главную страницу с примененными фильтрами
-            navigate(`/?${newSearchParams.toString()}`);
-            onClose(); // Закрываем модалку
+            // Применяем фильтры через callback (обновляет состояние в главном компоненте)
+            handleApplyFiltersCallback(filterValues);
+            
+            // Также обновляем URL для синхронизации
+            updateUrlWithFilters(filterValues);
         }
     };
 
@@ -249,13 +233,14 @@ export const SavedMatchesModal: React.FC<SavedMatchesModalProps> = ({ isOpen, on
                     <div className="flex justify-around gap-1 overflow-x-auto">
                         {Object.entries(match.filterValues).map(([key, value]) => {
                             const rusKey = RusMatchKeys[key as keyof typeof RusMatchKeys] || key;
+                            const displayValue = value && value.trim() !== '' ? value : '—';
                             return (
                                 <div key={key} className="text-center flex-shrink-0">
                                     <div className="text-slate-300 font-medium text-xs mb-1 bg-slate-600/50 rounded px-1 py-0.5">
                                         {rusKey}
                                     </div>
                                     <div className="bg-slate-600/30 border border-slate-500 rounded px-1 py-0.5 text-white text-xs font-semibold min-w-[1.5rem]">
-                                        {value}
+                                        {displayValue}
                                     </div>
                                 </div>
                             );

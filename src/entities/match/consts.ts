@@ -85,4 +85,22 @@ export const RusMatchKeys = {
     [BTTS_NO]: 'Оз-нет',
 } as const;
 
+// Порядок полей для сохранения в URL
+export const FILTER_ORDER = [
+    RusMatchKeys[TEAMS],
+    RusMatchKeys[P1],
+    RusMatchKeys[X],
+    RusMatchKeys[P2],
+    RusMatchKeys[HANDICAP1_0],
+    RusMatchKeys[HANDICAP2_0],
+    RusMatchKeys[ONE_TO_SCORE],
+    RusMatchKeys[TWO_TO_SCORE],
+    RusMatchKeys[OVER2_5],
+    RusMatchKeys[UNDER2_5],
+    RusMatchKeys[OVER3],
+    RusMatchKeys[UNDER3],
+    RusMatchKeys[BTTS_YES],
+    RusMatchKeys[BTTS_NO],
+] as const;
+
 
