@@ -41,10 +41,10 @@ const writeFiltersToURL = (
   setSearchParams: ReturnType<typeof useSearchParams>[1]
 ) => {
   const sp = new URLSearchParams();
-  
+
   // Используем константу для порядка полей
   const orderedFields = FILTER_ORDER;
-  
+
   // Сохраняем фильтры в определенном порядке
   for (const label of orderedFields) {
     const value = filters[label];
@@ -56,7 +56,7 @@ const writeFiltersToURL = (
       }
     }
   }
-  
+
   setSearchParams(sp);
 };
 
@@ -202,7 +202,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         setAppliedFilters(newFilters);
         writeFiltersToURL(newFilters, setSearchParams);
       }, 300),
-      [] 
+      []
     );
 
     // Cleanup для debounce при размонтировании
@@ -216,10 +216,10 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const onInputChange = React.useCallback((columnId: string, value: string) => {
         setInputs(prevInputs => {
             const newInputs = { ...prevInputs, [columnId]: value };
-            
+
             // Применяем debounce для обновления appliedFilters
             debouncedApply(newInputs);
-            
+
             return newInputs;
         });
     }, [debouncedApply]);
@@ -239,24 +239,8 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Загрузка подсвеченных строк при монтировании
     React.useEffect(() => {
-        const savedMatches = betService.getSavedMatches();
-        const highlighted = new Set<string>();
-
-        savedMatches.forEach(match => {
-            if (betService.isHighlighted(match.id)) {
-                // Ищем строку в таблице по командам и дате
-                const tableRow = dataSet.find(row =>
-                    String(row[MatchIndexMap[MatchKeys.TEAMS]]) === match.matchData.teams &&
-                    String(row[MatchIndexMap[MatchKeys.DATE]]) === match.matchData.date
-                );
-                if (tableRow) {
-                    highlighted.add(`${tableRow[MatchIndexMap[MatchKeys.TEAMS]]}_${tableRow[MatchIndexMap[MatchKeys.DATE]]}`);
-                }
-            }
-        });
-
-        setHighlightedRows(highlighted);
-    }, [dataSet, betService]);
+        setHighlightedRows(betService.getHighlightedMatches());
+    }, [betService]);
 
 
     // refs для расчета доступной высоты
@@ -290,7 +274,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
             // Применяем debounce для обновления appliedFilters
             debouncedApply(clearedInputs);
-            
+
             return clearedInputs;
         });
     }, [debouncedApply]);
@@ -308,39 +292,20 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         }
     }, [appliedFilters, betService]);
 
-    // Обработчик подсветки строки
-    const handleToggleHighlight = React.useCallback((match: Match) => {
-        const matchKey = `${match[MatchIndexMap[MatchKeys.TEAMS]]}_${match[MatchIndexMap[MatchKeys.DATE]]}`;
-        const isHighlighted = highlightedRows.has(matchKey);
 
-        if (isHighlighted) {
-            highlightedRows.delete(matchKey);
-        } else {
-            highlightedRows.add(matchKey);
-        }
+    const handleToggleHighlight = (id: string) => {
+        setHighlightedRows(prev => {
+            const newHighlightedRows = new Set(prev);
+            if (newHighlightedRows.has(id)) {
+                newHighlightedRows.delete(id);
+            } else {
+                newHighlightedRows.add(id);
+            }
+            betService.toggleHighlight(id);
+            return newHighlightedRows;
+        });
+    };
 
-      setHighlightedRows((prev) => {
-        const updated = new Set(prev);
-        if (updated.has(matchKey)) {
-          updated.delete(matchKey);
-        } else {
-          updated.add(matchKey);
-        }
-        return updated;
-      });
-
-
-        // Сохраняем в сервис
-        const savedMatches = betService.getSavedMatches();
-        const existingMatch = savedMatches.find(m =>
-            m.matchData.teams === String(match[MatchIndexMap[MatchKeys.TEAMS]]) &&
-            m.matchData.date === String(match[MatchIndexMap[MatchKeys.DATE]])
-        );
-
-        if (existingMatch) {
-            betService.toggleHighlight(existingMatch.id);
-        }
-    }, [highlightedRows, betService]);
 
     // Обработчик применения фильтров
     const handleApplyFilters = (filterValues: Record<string, string>) => {
@@ -373,6 +338,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
         () => allRows.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize),
         [allRows, pageIndex, pageSize]
     );
+
 
     const financialResults = useMemo(() => {
         const totals: Record<string, number> = {
@@ -411,7 +377,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
         pageMatches.forEach((row) => {
             const match = row.original;
-            
+
             // Проверяем, есть ли счет у матча
             const score = String(match[scoreIndex] || '');
             if (!score || score.trim() === '' || score === 'undefined' || score === 'null') {
@@ -441,7 +407,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                 <Controls rowCount={allRows.length} setInputs={setInputs}
                           setAppliedFilters={setAppliedFilters} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
-                          setSearchParams={setSearchParams} setHighlightedRows={setHighlightedRows}
+                          setSearchParams={setSearchParams}
                           debouncedApply={debouncedApply}/>
 
                 {/* Таблица - занимает всю доступную высоту */}
@@ -501,8 +467,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                             <tbody className="divide-y divide-slate-700/50">
                             {pageMatches.map((match, matchIndex) => {
-                                const matchKey = `${match.original[MatchIndexMap[MatchKeys.TEAMS]]}_${match.original[MatchIndexMap[MatchKeys.DATE]]}`;
-                                const isHighlighted = highlightedRows.has(matchKey);
+                                const isHighlighted = highlightedRows.has(match.id);
 
                                 return (
                                     <tr
@@ -556,7 +521,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             size="sm"
                                                             variant="secondary"
                                                             onClick={() => {
-                                                                handleToggleHighlight(match.original);
+                                                                handleToggleHighlight(match.id);
                                                             }}
                                                             className='cursor-pointer'
                                                         >

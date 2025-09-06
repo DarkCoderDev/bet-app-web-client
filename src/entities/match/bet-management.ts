@@ -114,6 +114,10 @@ export class BetManagementService {
         return [...this.savedMatches];
     }
 
+    public getHighlightedMatches(): Set<string> {
+        return this.highlightedMatches;
+    }
+
     // Получение матчей по табу (Today/History)
     public getMatchesByTab(tab: 'today' | 'history'): SavedMatch[] {
         const today = new Date();
@@ -135,7 +139,7 @@ export class BetManagementService {
     // Группировка матчей по времени (для Today)
     public getGroupedMatches(tab: 'today' | 'history'): Record<string, SavedMatch[]> {
         const matches = this.getMatchesByTab(tab);
-        
+
         if (tab === 'history') {
             // Для history просто группируем по дате
             const groups: Record<string, SavedMatch[]> = {};
@@ -178,7 +182,7 @@ export class BetManagementService {
             // Ищем подходящую группу
             for (let i = 0; i < timeGroups.length; i++) {
                 const group = timeGroups[i];
-                if (group.matchDate.getTime() === matchDate.getTime() && 
+                if (group.matchDate.getTime() === matchDate.getTime() &&
                     Math.abs(matchTime - group.matchTime) <= 30) {
                     group.matches.push(match);
                     addedToGroup = true;
@@ -303,7 +307,7 @@ export class BetManagementService {
     // Вспомогательные методы для парсинга дат
     private parseMatchDate(dateStr: string): Date {
         if (!dateStr || !dateStr.includes(' ')) return new Date();
-        
+
         const datePart = dateStr.split(' ')[0]; // "30.08.25"
         const dateParts = datePart.split('.');
         if (dateParts.length === 3) {
@@ -317,7 +321,7 @@ export class BetManagementService {
 
     private parseMatchTime(dateStr: string): number {
         if (!dateStr || !dateStr.includes(' ')) return 0;
-        
+
         const timePart = dateStr.split(' ')[1]; // "17:00"
         const [hours, minutes] = timePart.split(':').map(Number);
         return hours * 60 + minutes;
@@ -341,7 +345,7 @@ export class BetManagementService {
 
         // Создаем Map для быстрого поиска матчей в актуальном датасете
         const datasetMap = new Map<string, Match>();
-        
+
         currentDataset.forEach(match => {
             const teams = String(match[MatchIndexMap[MatchKeys.TEAMS]] || '');
             const date = String(match[MatchIndexMap[MatchKeys.DATE]] || '');
@@ -351,14 +355,14 @@ export class BetManagementService {
 
         // Обновляем сохраненные матчи
         let hasUpdates = false;
-        
+
         this.savedMatches.forEach(savedMatch => {
             const key = `${savedMatch.matchData.teams}_${savedMatch.matchData.date}`;
             const currentMatch = datasetMap.get(key);
-            
+
             if (currentMatch) {
                 const currentScore = String(currentMatch[MatchIndexMap[MatchKeys.SCORE]] || '');
-                
+
                 // Обновляем счет только если он не пустой в актуальном датасете
                 if (currentScore && currentScore.trim() !== '') {
                     savedMatch.matchData.score = currentScore;
