@@ -12,7 +12,6 @@ import {MatchIndexMap, RusMatchKeys, MatchKeys, FILTER_ORDER} from "entities/mat
 import {signatures} from "entities/filter/signatures.ts";
 import {calculateBetResult, renderClean, getColumnIndex} from './lib';
 import {BetManagementService} from "entities/match/bet-management.ts";
-import {SavedMatchesModal} from "components/saved-matches.tsx";
 import {Controls} from "features/odds-table/modules/controls";
 import clsx from "clsx";
 import {Button} from "shared/ui/Button";
@@ -188,7 +187,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     const [pageIndex, setPageIndex] = React.useState<number>(0);
     const [pageSize] = React.useState<number>(29);
     const [searchParams, setSearchParams] = useSearchParams();
-    const [isSavedMatchesModalOpen, setIsSavedMatchesModalOpen] = React.useState(false);
 
     // Состояния для кастомной фильтрации
     const [inputs, setInputs] = React.useState<Record<string, string>>({});
@@ -283,15 +281,16 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     // Обработчик сохранения матча
     const handleSaveMatch = React.useCallback((match: Match) => {
         try {
-            betService.saveMatch(match, appliedFilters);
-
-            // Показываем уведомление (можно заменить на toast)
-            toast.success('Матч сохранен в финансовый менеджер!');
+            // Используем текущие значения инпутов, если appliedFilters пустой
+            const filtersToSave = Object.keys(appliedFilters).length > 0 ? appliedFilters : inputs;
+            console.log('Saving match with filters:', filtersToSave);
+            betService.saveMatch(match, filtersToSave);
+            toast.success('Матч сохранен в историю!');
         } catch (error) {
             console.error('Ошибка сохранения матча:', error);
             toast.error('Ошибка сохранения матча');
         }
-    }, [appliedFilters, betService]);
+    }, [appliedFilters, inputs, betService]);
 
 
     const handleToggleHighlight = (id: string) => {
@@ -407,8 +406,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
 
                 <Controls rowCount={allRows.length} setInputs={setInputs}
-                          setAppliedFilters={setAppliedFilters} setIsSavedMatchesModalOpen={setIsSavedMatchesModalOpen}
-                          setSearchParams={setSearchParams}
+                          setAppliedFilters={setAppliedFilters} setSearchParams={setSearchParams}
                           debouncedApply={debouncedApply}/>
 
                 {/* Таблица - занимает всю доступную высоту */}
@@ -567,15 +565,6 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
 
                 <Pagination setPageIndex={setPageIndex} pageCount={pageCount} pageIndex={pageIndex}/>
-
-
-                {/* Модалка сохраненных матчей */}
-                <SavedMatchesModal
-                    isOpen={isSavedMatchesModalOpen}
-                    onClose={() => setIsSavedMatchesModalOpen(false)}
-                    onApplyFilters={handleApplyFilters}
-                    currentDataset={dataSet}
-                />
             </div>
         </div>
     );

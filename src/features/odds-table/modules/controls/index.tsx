@@ -4,14 +4,13 @@ type Props = {
     rowCount: number;
     setInputs: (filters: Record<string, string>) => void;
     setAppliedFilters: (filters: Record<string, string>) => void;
-    setIsSavedMatchesModalOpen: (open: boolean) => void;
     setSearchParams: (params: URLSearchParams) => void;
     debouncedApply?: { cancel: () => void };
 }
 
 export const Controls = (props: Props) => {
 
-    const {rowCount: allRows, setIsSavedMatchesModalOpen, setInputs, setAppliedFilters, setSearchParams, debouncedApply} = props;
+    const {rowCount: allRows, setInputs, setAppliedFilters, setSearchParams, debouncedApply} = props;
 
     const handleReset = () => {
         // Отменяем pending debounce операции
@@ -25,9 +24,6 @@ export const Controls = (props: Props) => {
         setSearchParams(new URLSearchParams());
     }
 
-    const handleSaveMatches = () => {
-        setIsSavedMatchesModalOpen(true)
-    }
 
     return (
         <div
@@ -39,9 +35,6 @@ export const Controls = (props: Props) => {
                         Найдено: <span
                         className="text-blue-400 font-bold">{allRows.toLocaleString()}</span>
                     </div>
-                    <Button onClick={handleSaveMatches} variant="success" size="sm" className="text-xs cursor-pointer">
-                        💾 Сохраненные матчи
-                    </Button>
                     <Button onClick={handleReset} variant="danger" size="sm" className="text-xs cursor-pointer">
                         Сбросить фильтры
                     </Button>

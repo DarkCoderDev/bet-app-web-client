@@ -3,6 +3,8 @@ import {BrowserRouter as Router, Routes, Route, Navigate} from "react-router-dom
 import './global.css';
 import { TablePage } from "../pages/table/table-page.tsx";
 import { FinanceManagerPage } from "../pages/finance-manager-page";
+import { SavedMatchesPage } from "../pages/saved-matches-page";
+import { Navigation } from "shared/ui/Navigation";
 import type {Match} from "entities/match/types.ts";
 import { getDataSet } from "entities/match/api.ts";
 import {Toaster} from "react-hot-toast";
@@ -69,10 +71,12 @@ export const App = () => {
     return (
         <Router>
             <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+                <Navigation />
                 <div className="flex-1 min-h-0">
                     <Routes>
                         <Route path="/" element={<TablePage dataSet={matches} />} />
                         <Route path="/finance" element={<FinanceManagerPage />} />
+                        <Route path="/saved-matches" element={<SavedMatchesPage />} />
                         <Route path="/statistics" element={<div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-2xl">📈 Статистика - в разработке</div></div>} />
                         <Route path="/settings" element={<div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-2xl">⚙️ Настройки - в разработке</div></div>} />
                         <Route path="/profile" element={<div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-2xl">👤 Профиль - в разработке</div></div>} />
