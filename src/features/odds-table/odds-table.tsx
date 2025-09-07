@@ -123,6 +123,7 @@ const getBetResultForCell = (columnId: string, Match: Match): boolean => {
 
 // Маппинг ключей из signatures на заголовки колонок через RusMatchKeys
 const signatureKeyToColumnHeader: Record<string, string> = {
+    [MatchKeys.LEAGUE]: RusMatchKeys[MatchKeys.LEAGUE],
     [MatchKeys.P1]: RusMatchKeys[MatchKeys.P1],
     [MatchKeys.X]: RusMatchKeys[MatchKeys.X],
     [MatchKeys.P2]: RusMatchKeys[MatchKeys.P2],
@@ -505,7 +506,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                         {signatures.map((signature) => (
                                                             <button
                                                                 key={signature.label}
-                                                                className="px-2 p-1 text-white text-xs rounded transition-colors cursor-pointer hover:opacity-80"
+                                                                className="flex-1 basis-0 text-white text-xs rounded transition-colors cursor-pointer hover:opacity-80"
                                                                 style={{
                                                                     backgroundColor: signature.color
                                                                 }}

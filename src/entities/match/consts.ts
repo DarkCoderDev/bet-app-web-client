@@ -87,6 +87,7 @@ export const RusMatchKeys = {
 
 // Порядок полей для сохранения в URL
 export const FILTER_ORDER = [
+    RusMatchKeys[LEAGUE],
     RusMatchKeys[TEAMS],
     RusMatchKeys[P1],
     RusMatchKeys[X],
