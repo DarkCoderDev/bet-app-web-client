@@ -8,6 +8,7 @@ import {Navigation} from "shared/ui/Navigation";
 import type {Match} from "entities/match/types.ts";
 import {getDataSet} from "entities/match/api.ts";
 import {Toaster} from "react-hot-toast";
+import { Auth } from 'shared/ui/Auth/index.tsx';
 
 export const App = () => {
     const [matches, setMatches] = React.useState<Match[] | null>(null);
@@ -69,6 +70,7 @@ export const App = () => {
     }
 
     return (
+        <Auth>
         <Router>
             <div className="h-screen flex  flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
                 <Navigation/>
@@ -95,5 +97,6 @@ export const App = () => {
             </div>
             <Toaster position="top-right"/>
         </Router>
+        </Auth>
     );
 }
