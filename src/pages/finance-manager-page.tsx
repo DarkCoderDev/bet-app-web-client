@@ -3,11 +3,10 @@ import { StrategyService } from 'entities/strategy/strategy-service';
 import { CreateStrategyModal } from 'features/strategy/create-strategy-modal';
 import { StrategyList } from 'features/strategy/strategy-list';
 import { StrategyBetsModal } from 'features/strategy/strategy-bets-modal';
-import type { Strategy, StrategyStats } from 'entities/match/types';
+import type { Strategy } from 'entities/match/types';
 import { Button } from 'shared/ui/Button';
 
 export const FinanceManagerPage: React.FC = () => {
-    const [strategies, setStrategies] = useState<Strategy[]>([]);
     const [overallStats, setOverallStats] = useState<{
         totalBank: number;
         totalProfit: number;
@@ -27,7 +26,6 @@ export const FinanceManagerPage: React.FC = () => {
 
     const loadStrategies = () => {
         const allStrategies = strategyService.getAllStrategies();
-        setStrategies(allStrategies);
 
         // Расчет общей статистики
         let totalBank = 0;

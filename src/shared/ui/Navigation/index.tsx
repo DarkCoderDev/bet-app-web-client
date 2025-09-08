@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '../Button';
+// removed unused Button import
 
 const navigationItems = [
     { path: '/', label: 'Таблица матчей', icon: '📊' },

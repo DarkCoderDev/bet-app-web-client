@@ -72,7 +72,7 @@ export const App = () => {
     return (
         <Auth>
         <Router>
-            <div className="h-screen flex  flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+            <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
                 <Navigation/>
                 <div className="flex-1 overflow-y-auto">
                     <Routes>
@@ -80,15 +80,15 @@ export const App = () => {
                         <Route path="/finance" element={<FinanceManagerPage/>}/>
                         <Route path="/saved-matches" element={<SavedMatchesPage/>}/>
                         <Route path="/statistics" element={<div
-                            className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+                            className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
                             <div className="text-white text-2xl">📈 Статистика - в разработке</div>
                         </div>}/>
                         <Route path="/settings" element={<div
-                            className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+                            className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
                             <div className="text-white text-2xl">⚙️ Настройки - в разработке</div>
                         </div>}/>
                         <Route path="/profile" element={<div
-                            className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+                            className="h-full bg-gradient-to-br  from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
                             <div className="text-white text-2xl">👤 Профиль - в разработке</div>
                         </div>}/>
                         <Route path="*" element={<Navigate to="/" replace/>}/>

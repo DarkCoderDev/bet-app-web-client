@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BetManagementService } from 'entities/match/bet-management';
-import type { SavedMatch, Match } from 'entities/match/types';
+import type { SavedMatch } from 'entities/match/types';
 import { Button } from 'shared/ui/Button';
 import { RusMatchKeys, MatchIndexMap } from 'entities/match/consts';
 import { getDataSet } from 'entities/match/api';
+import toast from 'react-hot-toast';
 
 export const SavedMatchesPage: React.FC = () => {
     const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
@@ -50,16 +51,36 @@ export const SavedMatchesPage: React.FC = () => {
     };
 
     const handleUpdateBetResult = (id: string, result: 'won' | 'lost' | '') => {
-        betService.updateMatch(id, { betResult: result });
+        const current = betService.getSavedMatches().find(m => m.id === id)?.betResult || '';
+        const next = current === result ? '' : result;
+        betService.updateMatch(id, { betResult: next });
         loadSavedMatches();
     };
 
 
     const handleUpdateScore = (id: string, score: string) => {
+        const current = betService.getSavedMatches().find(m => m.id === id)?.matchData;
+        if (!current) return;
         betService.updateMatch(id, {
             matchData: {
-                ...betService.getSavedMatches().find(m => m.id === id)?.matchData,
-                score: score
+                league: current.league,
+                date: current.date,
+                teams: current.teams,
+                score: score,
+                firstHalfScore: current.firstHalfScore,
+                p1: current.p1,
+                x: current.x,
+                p2: current.p2,
+                handicap1_0: current.handicap1_0,
+                handicap2_0: current.handicap2_0,
+                oneToScore: current.oneToScore,
+                twoToScore: current.twoToScore,
+                over2_5: current.over2_5,
+                under2_5: current.under2_5,
+                over3: current.over3,
+                under3: current.under3,
+                bttsYes: current.bttsYes,
+                bttsNo: current.bttsNo,
             }
         });
         // Помечаем счет как введенный вручную
@@ -80,7 +101,7 @@ export const SavedMatchesPage: React.FC = () => {
                 loadSavedMatches();
                 toast.success(`Синхронизировано ${result.updated} матчей`);
             } else {
-                toast.info('Нет матчей для обновления');
+                toast('Нет матчей для обновления');
             }
             
             if (result.errors > 0) {
@@ -193,8 +214,14 @@ export const SavedMatchesPage: React.FC = () => {
                 const newMatches = validMatches.filter((match: SavedMatch) => !existingIds.has(match.id));
                 
                 // Сохраняем новые матчи
-                newMatches.forEach((match: SavedMatch) => {
-                    betService.saveMatch(match.matchData, match.filterValues);
+                newMatches.forEach((m: SavedMatch) => {
+                    // для импорта используем restoreMatch, если есть, иначе сохраняем через saveMatch
+                    if ('restoreMatch' in betService && typeof (betService as any).restoreMatch === 'function') {
+                        (betService as any).restoreMatch(m);
+                    } else {
+                        // попытка восстановить как можно ближе к исходным данным
+                        betService.saveMatch(m.matchData as unknown as any, m.filterValues);
+                    }
                 });
 
                 // Обновляем отображение
@@ -215,35 +242,35 @@ export const SavedMatchesPage: React.FC = () => {
         reader.readAsText(file);
     };
 
-    const formatDate = (dateStr: string) => {
-        try {
-            return new Date(dateStr).toLocaleDateString('ru-RU', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return dateStr;
-        }
-    };
+    // const formatDate = (dateStr: string) => {
+    //     try {
+    //         return new Date(dateStr).toLocaleDateString('ru-RU', {
+    //             weekday: 'short',
+    //             month: 'short',
+    //             day: 'numeric',
+    //             hour: '2-digit',
+    //             minute: '2-digit'
+    //         });
+    //     } catch {
+    //         return dateStr;
+    //     }
+    // };
 
-    const getBetResultColor = (result: string) => {
-        switch (result) {
-            case 'won': return 'text-green-400 bg-green-500/20';
-            case 'lost': return 'text-red-400 bg-red-500/20';
-            default: return 'text-yellow-400 bg-yellow-500/20';
-        }
-    };
+    // const getBetResultColor = (result: string) => {
+    //     switch (result) {
+    //         case 'won': return 'text-green-400 bg-green-500/20';
+    //         case 'lost': return 'text-red-400 bg-red-500/20';
+    //         default: return 'text-yellow-400 bg-yellow-500/20';
+    //     }
+    // };
 
-    const getBetResultText = (result: string) => {
-        switch (result) {
-            case 'won': return 'Выигрыш';
-            case 'lost': return 'Проигрыш';
-            default: return 'Не сыграно';
-        }
-    };
+    // const getBetResultText = (result: string) => {
+    //     switch (result) {
+    //         case 'won': return 'Выигрыш';
+    //         case 'lost': return 'Проигрыш';
+    //         default: return 'Не сыграно';
+    //     }
+    // };
 
     const formatGroupTime = (matches: SavedMatch[]) => {
         if (matches.length === 0) return '';
@@ -533,7 +560,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                         'ТМ3',
                                                                                         'Оз-да',
                                                                                         'Оз-нет'
-                                                                                    ].map((columnKey, index) => {
+                                                                                    ].map((columnKey) => {
                                                                                         const value = match.filterValues[columnKey]?.trim() || '';
                                                                                         return (
                                                                                             <div key={columnKey} className="flex items-center">
@@ -707,7 +734,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                         'ТМ3',
                                                                                         'Оз-да',
                                                                                         'Оз-нет'
-                                                                                    ].map((columnKey, index) => {
+                                                                                    ].map((columnKey) => {
                                                                                         const value = match.filterValues[columnKey]?.trim() || '';
                                                                                         return (
                                                                                             <div key={columnKey} className="flex items-center">
