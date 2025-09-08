@@ -185,7 +185,7 @@ const columns: ColumnDef<Match, string>[] = [
 export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[] }) {
     const {dataSet} = props;
     const [pageIndex, setPageIndex] = React.useState<number>(0);
-    const [pageSize] = React.useState<number>(29);
+    const [pageSize] = React.useState<number>(28);
     const [searchParams, setSearchParams] = useSearchParams();
 
     // Состояния для кастомной фильтрации
@@ -238,7 +238,20 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
     // Загрузка подсвеченных строк при монтировании
     React.useEffect(() => {
-        setHighlightedRows(betService.getHighlightedMatches());
+        const savedMatches = betService.getSavedMatches();
+        const highlightedSet = new Set<string>();
+
+        // Конвертируем сохраненные матчи в новый формат ID
+        savedMatches.forEach(match => {
+            if (match.isHighlighted) {
+                const matchId = `${match.matchData.teams}_${match.matchData.date}`;
+                highlightedSet.add(matchId);
+                console.log('Loaded highlighted match:', matchId);
+            }
+        });
+
+        console.log('Total highlighted matches loaded:', highlightedSet.size);
+        setHighlightedRows(highlightedSet);
     }, [betService]);
 
 
@@ -293,15 +306,33 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
     }, [appliedFilters, inputs, betService]);
 
 
-    const handleToggleHighlight = (id: string) => {
+    const handleToggleHighlight = (matchId: string) => {
+        console.log('Toggling highlight for matchId:', matchId);
+
         setHighlightedRows(prev => {
             const newHighlightedRows = new Set(prev);
-            if (newHighlightedRows.has(id)) {
-                newHighlightedRows.delete(id);
+            if (newHighlightedRows.has(matchId)) {
+                newHighlightedRows.delete(matchId);
+                console.log('Removed highlight for:', matchId);
             } else {
-                newHighlightedRows.add(id);
+                newHighlightedRows.add(matchId);
+                console.log('Added highlight for:', matchId);
             }
-            betService.toggleHighlight(id);
+
+            // Находим соответствующий сохраненный матч и обновляем его статус
+            const savedMatches = betService.getSavedMatches();
+            const savedMatch = savedMatches.find(match => {
+                const id = `${match.matchData.teams}_${match.matchData.date}`;
+                return id === matchId;
+            });
+
+            if (savedMatch) {
+                betService.updateMatch(savedMatch.id, { isHighlighted: newHighlightedRows.has(matchId) });
+                console.log('Updated saved match:', savedMatch.id, 'isHighlighted:', newHighlightedRows.has(matchId));
+            } else {
+                console.log('No saved match found for matchId:', matchId);
+            }
+
             return newHighlightedRows;
         });
     };
@@ -399,10 +430,10 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
 
     return (
-        <div className="h-full flex flex-col">
+        <div className=" flex flex-col">
             {/* Основной контейнер */}
             <div
-                className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col h-full">
+                className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col ">
 
 
                 <Controls rowCount={allRows.length} setInputs={setInputs}
@@ -466,11 +497,17 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
 
                             <tbody className="divide-y divide-slate-700/50">
                             {pageMatches.map((match, matchIndex) => {
-                                const isHighlighted = highlightedRows.has(match.id);
+                                // Создаем уникальный ID на основе данных матча
+                                // match.original содержит массив данных
+                                const teams = String(match.original[MatchIndexMap[MatchKeys.TEAMS]] || '');
+                                const date = String(match.original[MatchIndexMap[MatchKeys.DATE]] || '');
+
+                                const matchId = `${teams}_${date}`;
+                                const isHighlighted = highlightedRows.has(matchId);
 
                                 return (
                                     <tr
-                                        key={match.id}
+                                        key={matchId}
                                         className={`h-8 transition-all duration-200 ${
                                             isHighlighted ? 'bg-yellow-500/20' : 'hover:bg-slate-800/30'
                                         } ${
@@ -520,7 +557,7 @@ export const OddsTable = React.memo(function OddsTable(props: { dataSet: Match[]
                                                             size="sm"
                                                             variant="secondary"
                                                             onClick={() => {
-                                                                handleToggleHighlight(match.id);
+                                                                handleToggleHighlight(matchId);
                                                             }}
                                                             className='cursor-pointer'
                                                         >

@@ -33,6 +33,8 @@ export interface SavedMatch {
     betResult?: 'won' | 'lost' | ''; // Результат ставки
     finalScore?: string; // Финальный счет
     isHighlighted?: boolean; // Подсвечен ли матч в таблице
+    lastSyncDate?: string; // Дата последней синхронизации с датасетом
+    scoreSource?: 'dataset' | 'manual'; // Источник счета
 }
 
 // Типы для стратегий

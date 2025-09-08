@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BetManagementService } from 'entities/match/bet-management';
-import type { SavedMatch } from 'entities/match/types';
+import type { SavedMatch, Match } from 'entities/match/types';
 import { Button } from 'shared/ui/Button';
 import { RusMatchKeys, MatchIndexMap } from 'entities/match/consts';
+import { getDataSet } from 'entities/match/api';
 
 export const SavedMatchesPage: React.FC = () => {
     const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
     const [todayMatches, setTodayMatches] = useState<Record<string, SavedMatch[]>>({});
     const [historyMatches, setHistoryMatches] = useState<Record<string, SavedMatch[]>>({});
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const betService = BetManagementService.getInstance();
     const navigate = useNavigate();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const loadSavedMatches = () => {
         setIsLoading(true);
@@ -20,11 +23,11 @@ export const SavedMatchesPage: React.FC = () => {
             // Получаем все матчи
             const allMatches = betService.getAllMatches();
             setSavedMatches(allMatches);
-            
+
             // Группируем по табам
             const today = betService.getGroupedMatches('today');
             const history = betService.getGroupedMatches('history');
-            
+
             setTodayMatches(today);
             setHistoryMatches(history);
         } catch (error) {
@@ -33,6 +36,7 @@ export const SavedMatchesPage: React.FC = () => {
             setIsLoading(false);
         }
     };
+
 
     useEffect(() => {
         loadSavedMatches();
@@ -52,13 +56,42 @@ export const SavedMatchesPage: React.FC = () => {
 
 
     const handleUpdateScore = (id: string, score: string) => {
-        betService.updateMatch(id, { 
-            matchData: { 
+        betService.updateMatch(id, {
+            matchData: {
                 ...betService.getSavedMatches().find(m => m.id === id)?.matchData,
-                score: score 
-            } 
+                score: score
+            }
         });
+        // Помечаем счет как введенный вручную
+        betService.markScoreAsManual(id);
         loadSavedMatches();
+    };
+
+    // Функция синхронизации с датасетом
+    const handleSyncWithDataset = async () => {
+        setIsSyncing(true);
+        try {
+            // Загружаем датасет при нажатии кнопки
+            const currentDataset = await getDataSet();
+            
+            const result = betService.syncWithDataset(currentDataset);
+            
+            if (result.updated > 0) {
+                loadSavedMatches();
+                toast.success(`Синхронизировано ${result.updated} матчей`);
+            } else {
+                toast.info('Нет матчей для обновления');
+            }
+            
+            if (result.errors > 0) {
+                toast.error(`Ошибок при синхронизации: ${result.errors}`);
+            }
+        } catch (error) {
+            console.error('Ошибка синхронизации:', error);
+            toast.error('Ошибка при загрузке датасета или синхронизации');
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
     const handleUpdateBetType = (id: string, betType: string) => {
@@ -68,7 +101,7 @@ export const SavedMatchesPage: React.FC = () => {
 
     const handleApplyFilters = (filterValues: Record<string, string>) => {
         console.log('Applying filters:', filterValues);
-        
+
         // Формируем URL параметры в правильном формате (индексы полей)
         const searchParams = new URLSearchParams();
         Object.entries(filterValues).forEach(([russianKey, value]) => {
@@ -82,9 +115,9 @@ export const SavedMatchesPage: React.FC = () => {
                 }
             }
         });
-        
+
         console.log('Search params:', searchParams.toString());
-        
+
         // Если есть параметры, переходим с ними
         if (searchParams.toString()) {
             navigate(`/?${searchParams.toString()}`);
@@ -92,6 +125,94 @@ export const SavedMatchesPage: React.FC = () => {
             console.log('No filters to apply, navigating to home page');
             navigate('/');
         }
+    };
+
+    // Функция экспорта данных в JSON
+    const handleExportData = () => {
+        try {
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                matches: savedMatches
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `saved-matches-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast.success(`Экспортировано ${savedMatches.length} матчей`);
+        } catch (error) {
+            console.error('Ошибка экспорта:', error);
+            toast.error('Ошибка при экспорте данных');
+        }
+    };
+
+    // Функция импорта данных из JSON
+    const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const importData = JSON.parse(content);
+
+                // Валидация структуры данных
+                if (!importData.matches || !Array.isArray(importData.matches)) {
+                    throw new Error('Неверный формат файла');
+                }
+
+                // Валидация каждого матча
+                const validMatches = importData.matches.filter((match: any) => {
+                    return match.id && 
+                           match.timestamp && 
+                           match.matchData && 
+                           match.filterValues &&
+                           typeof match.matchData === 'object' &&
+                           typeof match.filterValues === 'object';
+                });
+
+                if (validMatches.length === 0) {
+                    throw new Error('В файле нет валидных матчей');
+                }
+
+                // Объединяем с существующими данными
+                const existingMatches = betService.getSavedMatches();
+                const existingIds = new Set(existingMatches.map(m => m.id));
+                
+                // Добавляем только новые матчи (по ID)
+                const newMatches = validMatches.filter((match: SavedMatch) => !existingIds.has(match.id));
+                
+                // Сохраняем новые матчи
+                newMatches.forEach((match: SavedMatch) => {
+                    betService.saveMatch(match.matchData, match.filterValues);
+                });
+
+                // Обновляем отображение
+                loadSavedMatches();
+
+                toast.success(`Импортировано ${newMatches.length} новых матчей из ${validMatches.length} в файле`);
+                
+                // Очищаем input
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            } catch (error) {
+                console.error('Ошибка импорта:', error);
+                toast.error('Ошибка при импорте данных. Проверьте формат файла.');
+            }
+        };
+
+        reader.readAsText(file);
     };
 
     const formatDate = (dateStr: string) => {
@@ -126,7 +247,7 @@ export const SavedMatchesPage: React.FC = () => {
 
     const formatGroupTime = (matches: SavedMatch[]) => {
         if (matches.length === 0) return '';
-        
+
         // Находим самый ранний матч в группе
         const earliestMatch = matches.reduce((earliest, current) => {
             const earliestTime = new Date(earliest.matchData.date).getTime();
@@ -149,6 +270,11 @@ export const SavedMatchesPage: React.FC = () => {
     };
 
     const isScoreFromDataset = (match: SavedMatch) => {
+        // Проверяем источник счета
+        if (match.scoreSource === 'manual') {
+            return false; // Ручной ввод - показываем input
+        }
+        
         // Проверяем, есть ли счет и не является ли он пустым или placeholder
         const score = match.matchData.score;
         return score && score.trim() !== '' && score !== 'undefined' && score !== 'null' && score !== 'Не завершен';
@@ -175,9 +301,12 @@ export const SavedMatchesPage: React.FC = () => {
 
     const getCardBackgroundColor = (betResult: string) => {
         switch (betResult) {
-            case 'won': return 'bg-green-500/10 border-green-500/30';
-            case 'lost': return 'bg-red-500/10 border-red-500/30';
-            default: return 'bg-slate-700/30 border-slate-700';
+            case 'won':
+                return 'bg-gradient-to-r from-green-500/15 to-emerald-500/10 border-green-400/40 shadow-green-500/20';
+            case 'lost':
+                return 'bg-gradient-to-r from-red-500/15 to-rose-500/10 border-red-400/40 shadow-red-500/20';
+            default:
+                return 'bg-gradient-to-r from-slate-800/60 to-slate-700/40 border-slate-600/50 shadow-slate-500/10';
         }
     };
 
@@ -185,14 +314,14 @@ export const SavedMatchesPage: React.FC = () => {
         const totalMatches = savedMatches.length;
         const todayCount = Object.values(todayMatches).flat().length;
         const historyCount = Object.values(historyMatches).flat().length;
-        
+
         // Подсчет выигранных и проигранных матчей
         const wonMatches = savedMatches.filter(match => match.betResult === 'won').length;
         const lostMatches = savedMatches.filter(match => match.betResult === 'lost').length;
-        
-        return { 
-            totalMatches, 
-            todayMatches: todayCount, 
+
+        return {
+            totalMatches,
+            todayMatches: todayCount,
             historyMatches: historyCount,
             wonMatches,
             lostMatches
@@ -217,7 +346,37 @@ export const SavedMatchesPage: React.FC = () => {
             <main className="flex-1 overflow-auto">
                 <div className="container mx-auto px-4 py-3 pb-4">
                     <div className="mb-4">
-                        <h1 className="text-2xl font-bold text-white mb-1">Сохраненные матчи</h1>
+                        <div className="flex items-center justify-between mb-1">
+                            <h1 className="text-2xl font-bold text-white">Сохраненные матчи</h1>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSyncWithDataset}
+                                    disabled={isSyncing}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/30 flex items-center gap-1"
+                                >
+                                    {isSyncing ? '🔄' : '🔄'} {isSyncing ? 'Синхронизация...' : 'Синхронизация'}
+                                </button>
+                                <button
+                                    onClick={handleExportData}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 flex items-center gap-1"
+                                >
+                                    📤 Экспорт
+                                </button>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 flex items-center gap-1"
+                                >
+                                    📥 Импорт
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleImportData}
+                                    className="hidden"
+                                />
+                            </div>
+                        </div>
                         <p className="text-slate-300 text-sm">
                             История и статистика ваших матчей
                         </p>
@@ -251,7 +410,7 @@ export const SavedMatchesPage: React.FC = () => {
                             </p>
                             <Button
                                 variant="primary"
-                                onClick={() => window.location.href = '/'}
+                                onClick={() => navigate('/')}
                             >
                                 Перейти к таблице матчей
                             </Button>
@@ -263,11 +422,11 @@ export const SavedMatchesPage: React.FC = () => {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <h2 className="text-lg font-bold text-white">Сегодня</h2>
-                                        <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                                        <span className="px-2 py-1 bg-gray-500/20 text-white  text-xs rounded-full">
                                             {stats.todayMatches}
                                         </span>
                                     </div>
-                                    
+
                                     <div className="space-y-2">
                                         {Object.entries(todayMatches).map(([groupKey, matches]) => (
                                             <div key={groupKey} className="bg-slate-800/50 rounded border border-slate-700">
@@ -275,9 +434,6 @@ export const SavedMatchesPage: React.FC = () => {
                                                     <h3 className="text-sm font-semibold text-white">
                                                         {formatGroupTime(matches)}
                                                     </h3>
-                                                    <p className="text-slate-400 text-xs">
-                                                        {matches.length} матч{matches.length === 1 ? '' : matches.length < 5 ? 'а' : 'ей'}
-                                                    </p>
                                                 </div>
 
                                                 <div className="p-2">
@@ -286,38 +442,44 @@ export const SavedMatchesPage: React.FC = () => {
                                                             const dateTime = formatDateTime(match.matchData.date);
                                                             const scoreFromDataset = isScoreFromDataset(match);
                                                             const cardBgColor = getCardBackgroundColor(match.betResult || '');
-                                                            
+
                                                             return (
                                                                 <div
                                                                     key={match.id}
-                                                                    className={`p-2 rounded border ${cardBgColor}`}
+                                                                    className={`p-3 rounded-xl border ${cardBgColor} backdrop-blur-sm shadow-md`}
                                                                 >
                                                                     <div className="flex items-start gap-4">
                                                                         {/* Левая часть: Информация о матче */}
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="font-medium text-white text-xs truncate">
+                                                                            <div className="font-semibold text-white text-sm truncate">
                                                                                 {match.matchData.teams}
                                                                             </div>
-                                                                            <div className="text-slate-400 text-xs mb-0.5">
+                                                                            <div className="text-slate-400 text-xs mb-1">
                                                                                 {match.matchData.league}
                                                                             </div>
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="text-slate-300 text-xs">
                                                                                     {dateTime.date} {dateTime.time}
                                                                                 </div>
-                                                                                <div className="w-10">
+                                                                                <div className="w-12 relative">
                                                                                     {scoreFromDataset ? (
-                                                                                        <div className="text-green-400 text-xs font-medium text-center">
+                                                                                        <div className="text-green-400 text-sm font-bold text-center bg-green-500/10 rounded-lg py-1 relative group">
                                                                                             {match.matchData.score}
+                                                                                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" title="Счет из датасета"></div>
                                                                                         </div>
                                                                                     ) : (
-                                                                                        <input
-                                                                                            type="text"
-                                                                                            value={match.matchData.score || ''}
-                                                                                            onChange={(e) => handleUpdateScore(match.id, e.target.value)}
-                                                                                            placeholder="Счет"
-                                                                                            className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center"
-                                                                                        />
+                                                                                        <div className="relative">
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                value={match.matchData.score || ''}
+                                                                                                onChange={(e) => handleUpdateScore(match.id, e.target.value)}
+                                                                                                placeholder="Счет"
+                                                                                                className="w-full px-2 py-1 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 focus:bg-slate-700 text-center transition-all duration-200"
+                                                                                            />
+                                                                                            {match.scoreSource === 'manual' && (
+                                                                                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full" title="Счет введен вручную"></div>
+                                                                                            )}
+                                                                                        </div>
                                                                                     )}
                                                                                 </div>
                                                                                 <input
@@ -325,25 +487,25 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                     value={match.betType || ''}
                                                                                     onChange={(e) => handleUpdateBetType(match.id, e.target.value)}
                                                                                     placeholder="Тип ставки"
-                                                                                    className="w-20 px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                                                                                    className="w-24 px-2 py-1 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 focus:bg-slate-700 transition-all duration-200"
                                                                                 />
                                                                                 <div className="flex gap-1">
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'won')}
-                                                                                        className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
                                                                                             match.betResult === 'won'
-                                                                                                ? 'bg-green-600 text-white'
-                                                                                                : 'bg-slate-700 text-slate-300 hover:bg-green-600 hover:text-white'
+                                                                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-green-500 hover:to-emerald-500 hover:text-white hover:shadow-lg hover:shadow-green-500/30'
                                                                                         }`}
                                                                                     >
                                                                                         W
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'lost')}
-                                                                                        className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
                                                                                             match.betResult === 'lost'
-                                                                                                ? 'bg-red-600 text-white'
-                                                                                                : 'bg-slate-700 text-slate-300 hover:bg-red-600 hover:text-white'
+                                                                                                ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-500 hover:text-white hover:shadow-lg hover:shadow-red-500/30'
                                                                                         }`}
                                                                                     >
                                                                                         L
@@ -354,12 +516,12 @@ export const SavedMatchesPage: React.FC = () => {
 
                                                                         {/* Центральная часть: Фильтрация */}
                                                                         <div className="flex-1 flex justify-center">
-                                                                            <div className="bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded border border-slate-500/50">
+                                                                            <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
                                                                                 <div className="flex items-center">
                                                                                     {[
                                                                                         'Лига',
                                                                                         'П1',
-                                                                                        'Х', 
+                                                                                        'Х',
                                                                                         'П2',
                                                                                         'Ф1(0)',
                                                                                         'Ф2(0)',
@@ -395,7 +557,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                             </div>
                                                                                             <button
                                                                                                 onClick={() => handleApplyFilters(match.filterValues)}
-                                                                                                className="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors relative z-10"
+                                                                                                className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
                                                                                             >
                                                                                                 Применить
                                                                                             </button>
@@ -409,7 +571,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                         <div className="flex items-center min-w-0">
                                                                             <button
                                                                                 onClick={() => handleDeleteMatch(match.id)}
-                                                                                className="px-1.5 py-0.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                                                                                className="px-2 py-1 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30"
                                                                             >
                                                                                 ✕
                                                                             </button>
@@ -431,11 +593,11 @@ export const SavedMatchesPage: React.FC = () => {
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <h2 className="text-lg font-bold text-white">История</h2>
-                                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full">
+                                        <span className="px-2 py-1 bg-gray-500/20 text-white text-xs rounded-full">
                                             {stats.historyMatches}
                                         </span>
                                     </div>
-                                    
+
                                     <div className="space-y-2">
                                         {Object.entries(historyMatches).map(([groupKey, matches]) => (
                                             <div key={groupKey} className="bg-slate-800/50 rounded border border-slate-700">
@@ -454,38 +616,44 @@ export const SavedMatchesPage: React.FC = () => {
                                                             const dateTime = formatDateTime(match.matchData.date);
                                                             const scoreFromDataset = isScoreFromDataset(match);
                                                             const cardBgColor = getCardBackgroundColor(match.betResult || '');
-                                                            
+
                                                             return (
                                                                 <div
                                                                     key={match.id}
-                                                                    className={`p-2 rounded border ${cardBgColor}`}
+                                                                    className={`p-3 rounded-xl border ${cardBgColor} backdrop-blur-sm shadow-md`}
                                                                 >
                                                                     <div className="flex items-start gap-4">
                                                                         {/* Левая часть: Информация о матче */}
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="font-medium text-white text-xs truncate">
+                                                                            <div className="font-semibold text-white text-sm truncate">
                                                                                 {match.matchData.teams}
                                                                             </div>
-                                                                            <div className="text-slate-400 text-xs mb-0.5">
+                                                                            <div className="text-slate-400 text-xs mb-1">
                                                                                 {match.matchData.league}
                                                                             </div>
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="text-slate-300 text-xs">
                                                                                     {dateTime.date} {dateTime.time}
                                                                                 </div>
-                                                                                <div className="w-10">
+                                                                                <div className="w-12 relative">
                                                                                     {scoreFromDataset ? (
-                                                                                        <div className="text-green-400 text-xs font-medium text-center">
+                                                                                        <div className="text-green-400 text-sm font-bold text-center bg-green-500/10 rounded-lg py-1 relative group">
                                                                                             {match.matchData.score}
+                                                                                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" title="Счет из датасета"></div>
                                                                                         </div>
                                                                                     ) : (
-                                                                                        <input
-                                                                                            type="text"
-                                                                                            value={match.matchData.score || ''}
-                                                                                            onChange={(e) => handleUpdateScore(match.id, e.target.value)}
-                                                                                            placeholder="Счет"
-                                                                                            className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center"
-                                                                                        />
+                                                                                        <div className="relative">
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                value={match.matchData.score || ''}
+                                                                                                onChange={(e) => handleUpdateScore(match.id, e.target.value)}
+                                                                                                placeholder="Счет"
+                                                                                                className="w-full px-2 py-1 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 focus:bg-slate-700 text-center transition-all duration-200"
+                                                                                            />
+                                                                                            {match.scoreSource === 'manual' && (
+                                                                                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full" title="Счет введен вручную"></div>
+                                                                                            )}
+                                                                                        </div>
                                                                                     )}
                                                                                 </div>
                                                                                 <input
@@ -493,25 +661,25 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                     value={match.betType || ''}
                                                                                     onChange={(e) => handleUpdateBetType(match.id, e.target.value)}
                                                                                     placeholder="Тип ставки"
-                                                                                    className="w-20 px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                                                                                    className="w-24 px-2 py-1 bg-slate-700/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 focus:bg-slate-700 transition-all duration-200"
                                                                                 />
                                                                                 <div className="flex gap-1">
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'won')}
-                                                                                        className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
                                                                                             match.betResult === 'won'
-                                                                                                ? 'bg-green-600 text-white'
-                                                                                                : 'bg-slate-700 text-slate-300 hover:bg-green-600 hover:text-white'
+                                                                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-green-500 hover:to-emerald-500 hover:text-white hover:shadow-lg hover:shadow-green-500/30'
                                                                                         }`}
                                                                                     >
                                                                                         W
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'lost')}
-                                                                                        className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
                                                                                             match.betResult === 'lost'
-                                                                                                ? 'bg-red-600 text-white'
-                                                                                                : 'bg-slate-700 text-slate-300 hover:bg-red-600 hover:text-white'
+                                                                                                ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-500 hover:text-white hover:shadow-lg hover:shadow-red-500/30'
                                                                                         }`}
                                                                                     >
                                                                                         L
@@ -522,12 +690,12 @@ export const SavedMatchesPage: React.FC = () => {
 
                                                                         {/* Центральная часть: Фильтрация */}
                                                                         <div className="flex-1 flex justify-center">
-                                                                            <div className="bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded border border-slate-500/50">
+                                                                            <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
                                                                                 <div className="flex items-center">
                                                                                     {[
                                                                                         'Лига',
                                                                                         'П1',
-                                                                                        'Х', 
+                                                                                        'Х',
                                                                                         'П2',
                                                                                         'Ф1(0)',
                                                                                         'Ф2(0)',
@@ -563,7 +731,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                             </div>
                                                                                             <button
                                                                                                 onClick={() => handleApplyFilters(match.filterValues)}
-                                                                                                className="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors relative z-10"
+                                                                                                className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
                                                                                             >
                                                                                                 Применить
                                                                                             </button>
@@ -577,7 +745,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                         <div className="flex items-center min-w-0">
                                                                             <button
                                                                                 onClick={() => handleDeleteMatch(match.id)}
-                                                                                className="px-1.5 py-0.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                                                                                className="px-2 py-1 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30"
                                                                             >
                                                                                 ✕
                                                                             </button>

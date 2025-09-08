@@ -100,7 +100,9 @@ export class BetManagementService {
                 bet: '',
                 betResult: '',
                 finalScore: '',
-                isHighlighted: false
+                isHighlighted: false,
+                lastSyncDate: new Date().toISOString(),
+                scoreSource: 'dataset'
             };
             this.savedMatches.push(savedMatch);
         }
@@ -244,6 +246,57 @@ export class BetManagementService {
     // Проверка, подсвечен ли матч
     public isHighlighted(id: string): boolean {
         return this.highlightedMatches.has(id);
+    }
+
+    // Синхронизация счета с датасетом
+    public syncWithDataset(dataset: Match[]): { updated: number; errors: number } {
+        let updated = 0;
+        let errors = 0;
+
+        this.savedMatches.forEach(savedMatch => {
+            try {
+                // Ищем соответствующий матч в датасете
+                const datasetMatch = dataset.find(match => {
+                    const datasetTeams = String(match[MatchIndexMap[MatchKeys.TEAMS]] || '');
+                    const datasetDate = String(match[MatchIndexMap[MatchKeys.DATE]] || '');
+                    
+                    return datasetTeams === savedMatch.matchData.teams && 
+                           datasetDate === savedMatch.matchData.date;
+                });
+
+                if (datasetMatch) {
+                    const datasetScore = String(datasetMatch[MatchIndexMap[MatchKeys.SCORE]] || '');
+                    const currentScore = savedMatch.matchData.score;
+                    
+                    // Обновляем счет только если он изменился и не был изменен вручную
+                    if (datasetScore !== currentScore && savedMatch.scoreSource !== 'manual') {
+                        savedMatch.matchData.score = datasetScore;
+                        savedMatch.lastSyncDate = new Date().toISOString();
+                        savedMatch.scoreSource = 'dataset';
+                        updated++;
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка синхронизации матча:', error);
+                errors++;
+            }
+        });
+
+        if (updated > 0) {
+            this.saveToStorage();
+        }
+
+        return { updated, errors };
+    }
+
+    // Обновление источника счета при ручном изменении
+    public markScoreAsManual(matchId: string): void {
+        const match = this.savedMatches.find(m => m.id === matchId);
+        if (match) {
+            match.scoreSource = 'manual';
+            match.lastSyncDate = new Date().toISOString();
+            this.saveToStorage();
+        }
     }
 
     // Экспорт данных
