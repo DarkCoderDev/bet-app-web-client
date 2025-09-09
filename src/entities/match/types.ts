@@ -46,11 +46,7 @@ export interface Bet {
     coefficient: number;
     amount: number; // Сумма ставки
     result?: 'won' | 'lost' | 'pending'; // Результат ставки
-    matchInfo?: {
-        teams: string;
-        date: string;
-        league: string;
-    };
+    savedMatchId: string; // ID сохраненного матча
     timestamp: string;
 }
 

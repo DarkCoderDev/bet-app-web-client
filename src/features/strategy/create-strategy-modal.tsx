@@ -111,3 +111,4 @@ export const CreateStrategyModal: React.FC<CreateStrategyModalProps> = ({
         </div>
     );
 };
+

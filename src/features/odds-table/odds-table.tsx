@@ -364,7 +364,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
       setActiveSignatures({ [matchId]: signature.label });
 
       // Обновляем inputs
-      setInputs((prevInputs) => {
+      setInputs(() => {
         const coefficientColumns = Object.values(signatureKeyToColumnHeader);
 
         // Сбрасываем все колонки коэффициентов
@@ -452,12 +452,6 @@ export const OddsTable = React.memo(function OddsTable(props: {
     });
   };
 
-  // Обработчик применения фильтров
-  const handleApplyFilters = (filterValues: Record<string, string>) => {
-    setInputs(filterValues);
-    setAppliedFilters(filterValues);
-    writeFiltersToURL(filterValues, setSearchParams);
-  };
 
   // Применяем кастомную фильтрацию
   const filteredData = React.useMemo(() => {

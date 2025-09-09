@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StrategyService } from 'entities/strategy/strategy-service';
-import type { Strategy, Bet, BetType, StrategyStats } from 'entities/match/types';
+import { BetManagementService } from 'entities/match/bet-management';
+import type { Strategy, Bet, BetType, StrategyStats, SavedMatch } from 'entities/match/types';
 import { Button } from 'shared/ui/Button';
+import { MatchSelectionModal } from './match-selection-modal';
 
 interface StrategyBetsModalProps {
     isOpen: boolean;
@@ -10,10 +12,6 @@ interface StrategyBetsModalProps {
     onBetsUpdated: () => void;
 }
 
-const BET_TYPES: BetType[] = [
-    'П1', 'Х', 'П2', 'Ф1(0)', 'Ф2(0)', '1 заб', '2 заб', 
-    'ТБ2.5', 'ТМ2.5', 'ТБ3', 'ТМ3', 'Оз-да', 'Оз-нет'
-];
 
 export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
     isOpen,
@@ -23,14 +21,10 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
 }) => {
     const [bets, setBets] = useState<Bet[]>([]);
     const [stats, setStats] = useState<StrategyStats | null>(null);
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [newBet, setNewBet] = useState({
-        betType: 'П1' as BetType,
-        coefficient: '',
-        amount: ''
-    });
+    const [showMatchSelection, setShowMatchSelection] = useState(false);
 
     const strategyService = StrategyService.getInstance();
+    const betService = BetManagementService.getInstance();
 
     useEffect(() => {
         if (strategy) {
@@ -40,21 +34,15 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
         }
     }, [strategy]);
 
-    const handleAddBet = () => {
+    const handleMatchSelected = (savedMatchId: string, betType: BetType, coefficient: number, amount: number) => {
         if (!strategy) return;
-
-        const coefficient = parseFloat(newBet.coefficient);
-        const amount = parseFloat(newBet.amount);
-
-        if (isNaN(coefficient) || isNaN(amount) || coefficient <= 1 || amount <= 0) {
-            return;
-        }
 
         strategyService.addBetToStrategy(
             strategy.id,
-            newBet.betType,
+            betType,
             coefficient,
-            amount
+            amount,
+            savedMatchId
         );
 
         // Обновляем локальное состояние
@@ -65,8 +53,6 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
             setStats(strategyStats);
         }
 
-        setNewBet({ betType: 'П1', coefficient: '', amount: '' });
-        setShowAddForm(false);
         onBetsUpdated();
     };
 
@@ -129,6 +115,10 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
         }
     };
 
+    const getSavedMatchById = (savedMatchId: string): SavedMatch | null => {
+        return betService.getSavedMatches().find(match => match.id === savedMatchId) || null;
+    };
+
     if (!isOpen || !strategy) return null;
 
     return (
@@ -179,74 +169,11 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
                 <div className="mb-4">
                     <Button
                         variant="primary"
-                        onClick={() => setShowAddForm(!showAddForm)}
+                        onClick={() => setShowMatchSelection(true)}
                     >
-                        {showAddForm ? 'Отмена' : 'Добавить ставку'}
+                        Добавить ставку
                     </Button>
                 </div>
-
-                {/* Форма добавления ставки */}
-                {showAddForm && (
-                    <div className="mb-6 p-4 bg-slate-700/30 rounded-lg">
-                        <h3 className="text-lg font-semibold text-white mb-4">Новая ставка</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">
-                                    Тип ставки
-                                </label>
-                                <select
-                                    value={newBet.betType}
-                                    onChange={(e) => setNewBet({ ...newBet, betType: e.target.value as BetType })}
-                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    {BET_TYPES.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">
-                                    Коэффициент
-                                </label>
-                                <input
-                                    type="number"
-                                    value={newBet.coefficient}
-                                    onChange={(e) => setNewBet({ ...newBet, coefficient: e.target.value })}
-                                    placeholder="1.50"
-                                    min="1.01"
-                                    step="0.01"
-                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">
-                                    Сумма ставки (₽)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={newBet.amount}
-                                    onChange={(e) => setNewBet({ ...newBet, amount: e.target.value })}
-                                    placeholder="1000"
-                                    min="1"
-                                    step="1"
-                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="mt-4">
-                            <Button
-                                variant="primary"
-                                onClick={handleAddBet}
-                                disabled={!newBet.coefficient || !newBet.amount}
-                            >
-                                Добавить ставку
-                            </Button>
-                        </div>
-                    </div>
-                )}
 
                 {/* Список ставок */}
                 <div className="space-y-3">
@@ -258,66 +185,78 @@ export const StrategyBetsModal: React.FC<StrategyBetsModalProps> = ({
                         </p>
                     ) : (
                         <div className="space-y-2">
-                            {bets.map(bet => (
-                                <div
-                                    key={bet.id}
-                                    className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
-                                >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-4">
-                                            <span className="font-medium text-white">
-                                                {bet.betType}
-                                            </span>
-                                            <span className="text-slate-300">
-                                                {bet.coefficient}
-                                            </span>
-                                            <span className="text-slate-300">
-                                                {formatCurrency(bet.amount)}
-                                            </span>
-                                            <span className={`font-medium ${getResultColor(bet.result || 'pending')}`}>
-                                                {getResultText(bet.result || 'pending')}
-                                            </span>
-                                        </div>
-                                        {bet.matchInfo && (
-                                            <div className="text-slate-500 text-sm mt-1">
-                                                {bet.matchInfo.teams} - {bet.matchInfo.date}
+                            {bets.map(bet => {
+                                const savedMatch = getSavedMatchById(bet.savedMatchId);
+                                return (
+                                    <div
+                                        key={bet.id}
+                                        className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-medium text-white">
+                                                    {bet.betType}
+                                                </span>
+                                                <span className="text-slate-300">
+                                                    {bet.coefficient}
+                                                </span>
+                                                <span className="text-slate-300">
+                                                    {formatCurrency(bet.amount)}
+                                                </span>
+                                                <span className={`font-medium ${getResultColor(bet.result || 'pending')}`}>
+                                                    {getResultText(bet.result || 'pending')}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
+                                            {savedMatch && (
+                                                <div className="text-slate-500 text-sm mt-1">
+                                                    {savedMatch.matchData.teams} - {savedMatch.matchData.date}
+                                                    {savedMatch.matchData.league && ` (${savedMatch.matchData.league})`}
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <div className="flex gap-2">
-                                        {bet.result === 'pending' && (
-                                            <>
-                                                <Button
-                                                    size="sm"
-                                                    variant="success"
-                                                    onClick={() => handleUpdateBetResult(bet.id, 'won')}
-                                                >
-                                                    Выигрыш
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="danger"
-                                                    onClick={() => handleUpdateBetResult(bet.id, 'lost')}
-                                                >
-                                                    Проигрыш
-                                                </Button>
-                                            </>
-                                        )}
-                                        <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            onClick={() => handleRemoveBet(bet.id)}
-                                        >
-                                            Удалить
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            {bet.result === 'pending' && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="success"
+                                                        onClick={() => handleUpdateBetResult(bet.id, 'won')}
+                                                    >
+                                                        Выигрыш
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="danger"
+                                                        onClick={() => handleUpdateBetResult(bet.id, 'lost')}
+                                                    >
+                                                        Проигрыш
+                                                    </Button>
+                                                </>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => handleRemoveBet(bet.id)}
+                                            >
+                                                Удалить
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Модальное окно выбора матча */}
+            <MatchSelectionModal
+                isOpen={showMatchSelection}
+                onClose={() => setShowMatchSelection(false)}
+                onMatchSelected={handleMatchSelected}
+            />
         </div>
     );
 };
+

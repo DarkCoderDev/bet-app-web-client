@@ -97,7 +97,7 @@ export class StrategyService {
         betType: BetType, 
         coefficient: number, 
         amount: number,
-        matchInfo?: { teams: string; date: string; league: string }
+        savedMatchId: string
     ): boolean {
         const strategy = this.getStrategyById(strategyId);
         if (!strategy) return false;
@@ -108,7 +108,7 @@ export class StrategyService {
             coefficient,
             amount,
             result: 'pending',
-            matchInfo,
+            savedMatchId,
             timestamp: new Date().toISOString()
         };
 
@@ -231,3 +231,4 @@ export class StrategyService {
         this.saveToStorage();
     }
 }
+

@@ -171,3 +171,4 @@ export const StrategyList: React.FC<StrategyListProps> = ({ onStrategySelect }) 
         </div>
     );
 };
+
