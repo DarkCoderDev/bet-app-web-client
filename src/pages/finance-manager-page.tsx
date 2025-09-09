@@ -21,6 +21,7 @@ export const FinanceManagerPage: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
     const [isBetsModalOpen, setIsBetsModalOpen] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const strategyService = StrategyService.getInstance();
 
@@ -58,6 +59,7 @@ export const FinanceManagerPage: React.FC = () => {
 
     const handleStrategyCreated = () => {
         loadStrategies();
+        setRefreshTrigger(prev => prev + 1); // Увеличиваем триггер для обновления списка
     };
 
     const handleStrategySelect = (strategy: Strategy) => {
@@ -67,6 +69,7 @@ export const FinanceManagerPage: React.FC = () => {
 
     const handleBetsUpdated = () => {
         loadStrategies();
+        setRefreshTrigger(prev => prev + 1); // Увеличиваем триггер для обновления списка
     };
 
     const formatCurrency = (amount: number) => {
@@ -160,7 +163,10 @@ export const FinanceManagerPage: React.FC = () => {
                     {/* Список стратегий */}
                     <div className="mb-8">
                         <h2 className="text-2xl font-bold text-white mb-6">Мои стратегии</h2>
-                        <StrategyList onStrategySelect={handleStrategySelect} />
+                        <StrategyList 
+                            onStrategySelect={handleStrategySelect} 
+                            refreshTrigger={refreshTrigger}
+                        />
                     </div>
 
                 </div>

@@ -5,9 +5,10 @@ import { Button } from 'shared/ui/Button';
 
 interface StrategyListProps {
     onStrategySelect?: (strategy: Strategy) => void;
+    refreshTrigger?: number; // Триггер для обновления списка
 }
 
-export const StrategyList: React.FC<StrategyListProps> = ({ onStrategySelect }) => {
+export const StrategyList: React.FC<StrategyListProps> = ({ onStrategySelect, refreshTrigger }) => {
     const [strategies, setStrategies] = useState<Strategy[]>([]);
     const [stats, setStats] = useState<Map<string, StrategyStats>>(new Map());
     const strategyService = StrategyService.getInstance();
@@ -29,7 +30,7 @@ export const StrategyList: React.FC<StrategyListProps> = ({ onStrategySelect }) 
 
     useEffect(() => {
         loadStrategies();
-    }, []);
+    }, [refreshTrigger]); // Обновляем при изменении refreshTrigger
 
     const handleDeleteStrategy = (id: string) => {
         if (window.confirm('Вы уверены, что хотите удалить эту стратегию?')) {

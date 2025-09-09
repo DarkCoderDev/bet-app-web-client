@@ -325,23 +325,14 @@ export const OddsTable = React.memo(function OddsTable(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Загрузка подсвеченных строк при монтировании
+  // Загрузка подсвеченных строк при монтировании и при изменении сохраненных матчей
   React.useEffect(() => {
-    const savedMatches = betService.getSavedMatches();
-    const highlightedSet = new Set<string>();
-
-    // Конвертируем сохраненные матчи в новый формат ID
-    savedMatches.forEach((match) => {
-      if (match.isHighlighted) {
-        const matchId = `${match.matchData.teams}_${match.matchData.date}`;
-        highlightedSet.add(matchId);
-        console.log("Loaded highlighted match:", matchId);
-      }
-    });
-
-    console.log("Total highlighted matches loaded:", highlightedSet.size);
-    setHighlightedRows(highlightedSet);
-  }, [betService]);
+    // Загружаем выделенные матчи из localStorage
+    const highlightedMatches = betService.getHighlightedMatches();
+    console.log("Loaded highlighted matches from localStorage:", Array.from(highlightedMatches));
+    
+    setHighlightedRows(highlightedMatches);
+  }, [betService, dataSet]); // Добавляем dataSet как зависимость для обновления при изменении данных
 
   React.useEffect(() => {
     // Сбрасываем активные сигнатуры, если фильтры сброшены
@@ -417,17 +408,22 @@ export const OddsTable = React.memo(function OddsTable(props: {
   const handleToggleHighlight = (matchId: string) => {
     console.log("Toggling highlight for matchId:", matchId);
 
+    // Используем BetManagementService для сохранения в localStorage
+    const isHighlighted = betService.toggleHighlight(matchId);
+    console.log("Highlight status:", isHighlighted);
+
+    // Обновляем локальное состояние
     setHighlightedRows((prev) => {
       const newHighlightedRows = new Set(prev);
-      if (newHighlightedRows.has(matchId)) {
-        newHighlightedRows.delete(matchId);
-        console.log("Removed highlight for:", matchId);
-      } else {
+      if (isHighlighted) {
         newHighlightedRows.add(matchId);
         console.log("Added highlight for:", matchId);
+      } else {
+        newHighlightedRows.delete(matchId);
+        console.log("Removed highlight for:", matchId);
       }
 
-      // Находим соответствующий сохраненный матч и обновляем его статус
+      // Также обновляем статус в сохраненном матче, если он существует
       const savedMatches = betService.getSavedMatches();
       const savedMatch = savedMatches.find((match) => {
         const id = `${match.matchData.teams}_${match.matchData.date}`;
@@ -436,16 +432,14 @@ export const OddsTable = React.memo(function OddsTable(props: {
 
       if (savedMatch) {
         betService.updateMatch(savedMatch.id, {
-          isHighlighted: newHighlightedRows.has(matchId),
+          isHighlighted: isHighlighted,
         });
         console.log(
           "Updated saved match:",
           savedMatch.id,
           "isHighlighted:",
-          newHighlightedRows.has(matchId)
+          isHighlighted
         );
-      } else {
-        console.log("No saved match found for matchId:", matchId);
       }
 
       return newHighlightedRows;
