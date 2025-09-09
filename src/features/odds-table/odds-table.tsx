@@ -687,12 +687,12 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                 <button
                                   key={signature.label}
                                   className={clsx(
-                                    "flex-1 basis-0 text-xs rounded transition-all cursor-pointer border-1",
+                                    "flex-1 basis-0 text-xs rounded transition-all cursor-pointer border",
                                     activeSignatures[matchId] ===
                                       signature.label
-                                      ? "border-amber-500 text-white"
+                                      ? "border-white text-white"
                                       : "border-transparent text-gray-200",
-                                    "hover:border-amber-700"
+                                    "hover:border-gray-400"
                                   )}
                                   style={{
                                     backgroundColor: signature.color,
