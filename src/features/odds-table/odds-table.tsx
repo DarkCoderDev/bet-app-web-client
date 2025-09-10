@@ -147,84 +147,84 @@ const signatureKeyToColumnHeader: Record<string, string> = {
 
 type DataKey = keyof typeof MatchIndexMap;
 const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
-  { key: MatchKeys.WD, label: RusMatchKeys[MatchKeys.WD], widthClass: "w-11" },
+  { key: MatchKeys.WD, label: RusMatchKeys[MatchKeys.WD], widthClass: "w-16" },
   {
     key: MatchKeys.LEAGUE,
     label: RusMatchKeys[MatchKeys.LEAGUE],
-    widthClass: "w-2/12",
+    widthClass: "w-32",
   },
   {
     key: MatchKeys.DATE,
     label: RusMatchKeys[MatchKeys.DATE],
-    widthClass: "w-1/12",
+    widthClass: "w-20",
   },
   {
     key: MatchKeys.SCORE,
     label: RusMatchKeys[MatchKeys.SCORE],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.FIRST_HALF_SCORE,
     label: RusMatchKeys[MatchKeys.FIRST_HALF_SCORE],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.TEAMS,
     label: RusMatchKeys[MatchKeys.TEAMS],
-    widthClass: "w-2/12",
+    widthClass: "w-40",
   },
-  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-11" },
-  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-11" },
-  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-11" },
+  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-16" },
+  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-16" },
+  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-16" },
   {
     key: MatchKeys.HANDICAP1_0,
     label: RusMatchKeys[MatchKeys.HANDICAP1_0],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.HANDICAP2_0,
     label: RusMatchKeys[MatchKeys.HANDICAP2_0],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.ONE_TO_SCORE,
     label: RusMatchKeys[MatchKeys.ONE_TO_SCORE],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.TWO_TO_SCORE,
     label: RusMatchKeys[MatchKeys.TWO_TO_SCORE],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.OVER2_5,
     label: RusMatchKeys[MatchKeys.OVER2_5],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.UNDER2_5,
     label: RusMatchKeys[MatchKeys.UNDER2_5],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.OVER3,
     label: RusMatchKeys[MatchKeys.OVER3],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.UNDER3,
     label: RusMatchKeys[MatchKeys.UNDER3],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.BTTS_YES,
     label: RusMatchKeys[MatchKeys.BTTS_YES],
-    widthClass: "w-13",
+    widthClass: "w-16",
   },
   {
     key: MatchKeys.BTTS_NO,
     label: RusMatchKeys[MatchKeys.BTTS_NO],
-    widthClass: "w-12",
+    widthClass: "w-16",
   },
 ];
 
@@ -241,13 +241,13 @@ const columns: ColumnDef<Match, string>[] = [
     id: "Сигнатуры",
     header: "Сигнатуры",
     cell: () => "",
-    meta: { widthClass: "w-25" },
+    meta: { widthClass: "w-32" },
   }),
   columnHelper.display({
     id: "Действия",
     header: "Действия",
     cell: () => "",
-    meta: { widthClass: " w-20" },
+    meta: { widthClass: "w-24" },
   }),
 ];
 
@@ -256,7 +256,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
 }) {
   const { dataSet } = props;
   const [pageIndex, setPageIndex] = React.useState<number>(0);
-  const [pageSize] = React.useState<number>(28);
+  const [pageSize, setPageSize] = React.useState<number>(28);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeSignatures, setActiveSignatures] = React.useState<
     Record<string, string | null>
@@ -553,21 +553,24 @@ export const OddsTable = React.memo(function OddsTable(props: {
   }, [pageMatches]);
 
   return (
-    <div className=" flex flex-col">
+    <div className="flex flex-col h-full">
       {/* Основной контейнер */}
-      <div className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col ">
+      <div className="bg-white/5 backdrop-blur-xl overflow-hidden flex flex-col h-full">
         <Controls
           rowCount={allRows.length}
           setInputs={setInputs}
           setAppliedFilters={setAppliedFilters}
           setSearchParams={setSearchParams}
           debouncedApply={debouncedApply}
+          pageSize={pageSize}
+          setPageSize={setPageSize}
+          setPageIndex={setPageIndex}
         />
 
         {/* Таблица - занимает всю доступную высоту */}
         <div className="flex-1 overflow-hidden" ref={tableAreaRef}>
-          <div className="max-h-[100%] overflow-y-auto border border-slate-700 rounded-lg">
-            <table className="w-full table-fixed border-collapse overflow-auto h-full">
+          <div className="max-h-[100%] overflow-x-auto overflow-y-auto border border-slate-700 rounded-lg">
+            <table className="w-full table-fixed border-collapse overflow-auto h-full min-w-[1200px] sm:min-w-[1000px]">
               <thead className="sticky top-0 z-10">
                 {table.getHeaderGroups().map((hg) => (
                   <tr
@@ -586,44 +589,39 @@ export const OddsTable = React.memo(function OddsTable(props: {
                           ).meta?.widthClass ?? "w-1/12"
                         }`}
                       >
-                        {h.column.id === "Сигнатуры" ||
-                        h.column.id === "Действия" ? (
-                          <div className="select-none text-blue-300 font-bold text-center">
+                        <div className="relative">
+                          <div className="select-none text-blue-300 font-bold mb-1 text-center text-xs">
                             {h.column.id}
                           </div>
-                        ) : (
-                          <div className="relative">
-                            <div className="select-none text-blue-300 font-bold mb-1 text-center">
-                              {h.column.id}
-                            </div>
 
-                            {/* Значение флета над инпутом */}
-                            {financialResults &&
-                              financialResults[h.column.id] !== undefined && (
-                                <div
-                                  className={clsx(
-                                    "mb-1  text-xs font-bold rounded-sm text-center",
-                                    financialResults[h.column.id] > 0
-                                      ? "bg-green-500 text-white"
-                                      : "bg-red-500 text-white"
-                                  )}
-                                >
-                                  {financialResults[h.column.id].toFixed(2)}
-                                </div>
-                              )}
+                          {/* Значение флета над инпутом */}
+                          {financialResults &&
+                            financialResults[h.column.id] !== undefined && (
+                              <div
+                                className={clsx(
+                                  "mb-1 text-xs font-bold rounded-sm text-center",
+                                  financialResults[h.column.id] > 0
+                                    ? "bg-green-500 text-white"
+                                    : "bg-red-500 text-white"
+                                )}
+                              >
+                                {financialResults[h.column.id].toFixed(2)}
+                              </div>
+                            )}
 
-                            {/* Поле фильтра на всю доступную ширину */}
+                          {/* Поле фильтра только для колонок с данными */}
+                          {h.column.id !== "Сигнатуры" && h.column.id !== "Действия" && (
                             <input
                               value={inputs[h.column.id] || ""}
                               onChange={(e) =>
                                 onInputChange(h.column.id, e.target.value)
                               }
-                              placeholder={`${h.column.id}`}
-                              className="w-full px-1 py-0 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
+                              placeholder="Фильтр"
+                              className="w-full px-1 py-0.5 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                               onClick={(e) => e.stopPropagation()}
                             />
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </th>
                     ))}
                   </tr>
