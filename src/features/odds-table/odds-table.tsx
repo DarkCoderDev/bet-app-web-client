@@ -147,84 +147,84 @@ const signatureKeyToColumnHeader: Record<string, string> = {
 
 type DataKey = keyof typeof MatchIndexMap;
 const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
-  { key: MatchKeys.WD, label: RusMatchKeys[MatchKeys.WD], widthClass: "w-16" },
+  { key: MatchKeys.WD, label: RusMatchKeys[MatchKeys.WD], widthClass: "w-11" },
   {
     key: MatchKeys.LEAGUE,
     label: RusMatchKeys[MatchKeys.LEAGUE],
-    widthClass: "w-32",
+    widthClass: "w-50",
   },
   {
     key: MatchKeys.DATE,
     label: RusMatchKeys[MatchKeys.DATE],
-    widthClass: "w-20",
+    widthClass: "w-25",
   },
   {
     key: MatchKeys.SCORE,
     label: RusMatchKeys[MatchKeys.SCORE],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.FIRST_HALF_SCORE,
     label: RusMatchKeys[MatchKeys.FIRST_HALF_SCORE],
-    widthClass: "w-16",
+    widthClass: "w-12",
   },
   {
     key: MatchKeys.TEAMS,
     label: RusMatchKeys[MatchKeys.TEAMS],
-    widthClass: "w-40",
+    widthClass: "w-50",
   },
-  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-16" },
-  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-16" },
-  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-16" },
+  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-11" },
+  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-11" },
+  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-11" },
   {
     key: MatchKeys.HANDICAP1_0,
     label: RusMatchKeys[MatchKeys.HANDICAP1_0],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.HANDICAP2_0,
     label: RusMatchKeys[MatchKeys.HANDICAP2_0],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.ONE_TO_SCORE,
     label: RusMatchKeys[MatchKeys.ONE_TO_SCORE],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.TWO_TO_SCORE,
     label: RusMatchKeys[MatchKeys.TWO_TO_SCORE],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.OVER2_5,
     label: RusMatchKeys[MatchKeys.OVER2_5],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.UNDER2_5,
     label: RusMatchKeys[MatchKeys.UNDER2_5],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.OVER3,
     label: RusMatchKeys[MatchKeys.OVER3],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.UNDER3,
     label: RusMatchKeys[MatchKeys.UNDER3],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.BTTS_YES,
     label: RusMatchKeys[MatchKeys.BTTS_YES],
-    widthClass: "w-16",
+    widthClass: "w-11",
   },
   {
     key: MatchKeys.BTTS_NO,
     label: RusMatchKeys[MatchKeys.BTTS_NO],
-    widthClass: "w-16",
+    widthClass: "w-12",
   },
 ];
 
@@ -241,7 +241,7 @@ const columns: ColumnDef<Match, string>[] = [
     id: "Сигнатуры",
     header: "Сигнатуры",
     cell: () => "",
-    meta: { widthClass: "w-32" },
+    meta: { widthClass: "w-20" },
   }),
   columnHelper.display({
     id: "Действия",
@@ -616,7 +616,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                               onChange={(e) =>
                                 onInputChange(h.column.id, e.target.value)
                               }
-                              placeholder="Фильтр"
+                              placeholder={h.column.id}
                               className="w-full px-1 py-0.5 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                               onClick={(e) => e.stopPropagation()}
                             />
