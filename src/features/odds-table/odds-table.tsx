@@ -395,8 +395,22 @@ export const OddsTable = React.memo(function OddsTable(props: {
         const filtersToSave =
           Object.keys(appliedFilters).length > 0 ? appliedFilters : inputs;
         console.log("Saving match with filters:", filtersToSave);
-        betService.saveMatch(match, filtersToSave);
-        toast.success("Матч сохранен в историю!");
+
+        // Запрашиваем тип ставки перед сохранением
+        // eslint-disable-next-line no-alert
+        const enteredBetType = window.prompt(
+          "Введите тип ставки (например: П1, Х, П2, ТБ2.5 и т.д.)",
+          ""
+        );
+
+        const saved = betService.saveMatch(match, filtersToSave);
+
+        if (enteredBetType && enteredBetType.trim()) {
+          betService.updateMatch(saved.id, { betType: enteredBetType.trim() });
+          toast.success("Матч сохранен и тип ставки добавлен!");
+        } else {
+          toast.success("Матч сохранен в историю!");
+        }
       } catch (error) {
         console.error("Ошибка сохранения матча:", error);
         toast.error("Ошибка сохранения матча");
