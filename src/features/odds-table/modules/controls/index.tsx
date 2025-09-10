@@ -46,8 +46,6 @@ export const Controls = (props: Props) => {
                                 }}
                                 className="px-2 py-1 bg-slate-700/80 border border-slate-600 rounded text-white text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-colors hover:bg-slate-700"
                             >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
                                 <option value={28}>28</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
@@ -79,8 +77,6 @@ export const Controls = (props: Props) => {
                             }}
                             className="px-2 py-1 bg-slate-700/80 border border-slate-600 rounded text-white text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-colors hover:bg-slate-700"
                         >
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
                             <option value={28}>28</option>
                             <option value={50}>50</option>
                             <option value={100}>100</option>
