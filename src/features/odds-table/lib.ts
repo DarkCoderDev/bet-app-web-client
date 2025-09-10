@@ -3,28 +3,36 @@ import type {FilterFn} from "@tanstack/react-table";
 import type {Match} from "entities/match/types.ts";
 
 
-export const calculateBetResult = (betType: string, homeScore: number, awayScore: number): boolean => {
+export type BetResult = 'win' | 'return' | 'lose';
+
+export const calculateBetResult = (
+    betType: string,
+    homeScore: number,
+    awayScore: number
+): BetResult => {
     const totalGoals = homeScore + awayScore;
 
-    const betResults = {
-        'П1': () => homeScore > awayScore,
-        'Х': () => homeScore === awayScore,
-        'П2': () => awayScore > homeScore,
-        'Ф1(0)': () => homeScore > awayScore,
-        'Ф2(0)': () => awayScore > homeScore,
-        '1 заб': () => homeScore > 0,
-        '2 заб': () => awayScore > 0,
-        'ТМ2.5': () => totalGoals < 2.5,
-        'ТБ2.5': () => totalGoals > 2.5,
-        'ТМ3': () => totalGoals < 3,
-        'ТБ3': () => totalGoals > 3,
-        'Оз-да': () => homeScore > 0 && awayScore > 0,
-        'Оз-нет': () => homeScore === 0 || awayScore === 0,
+    const betResults: Record<string, () => BetResult> = {
+        'П1': () => (homeScore > awayScore ? 'win' : 'lose'),
+        'Х': () => (homeScore === awayScore ? 'win' : 'lose'),
+        'П2': () => (awayScore > homeScore ? 'win' : 'lose'),
+
+        'Ф1(0)': () => (homeScore > awayScore ? 'win' : homeScore === awayScore ? 'return' : 'lose'),
+        'Ф2(0)': () => (awayScore > homeScore ? 'win' : homeScore === awayScore ? 'return' : 'lose'),
+
+        '1 заб': () => (homeScore > 0 ? 'win' : 'lose'),
+        '2 заб': () => (awayScore > 0 ? 'win' : 'lose'),
+
+        'ТМ2.5': () => (totalGoals < 2.5 ? 'win' : 'lose'),
+        'ТБ2.5': () => (totalGoals > 2.5 ? 'win' : 'lose'),
+        'ТМ3': () => (totalGoals < 3 ? 'win' : totalGoals === 3 ? 'return' : 'lose'),
+        'ТБ3': () => (totalGoals > 3 ? 'win' : totalGoals === 3 ? 'return' : 'lose'),
+
+        'Оз-да': () => (homeScore > 0 && awayScore > 0 ? 'win' : 'lose'),
+        'Оз-нет': () => (homeScore === 0 || awayScore === 0 ? 'win' : 'lose'),
     };
 
-    const result = betResults[betType as keyof typeof betResults]?.() ?? false;
-    
-    return result;
+    return betResults[betType]?.() ?? 'lose';
 };
 
 
@@ -36,7 +44,7 @@ const columnIndexCache = new Map<string, number>();
 export const includesText: FilterFn<Match> = (match, columnId, filterValue) => {
     // Быстрая проверка на пустое значение фильтра
     if (!filterValue) return true;
-    
+
     // Кэшируем индекс колонки
     let columnIndex = columnIndexCache.get(columnId);
     if (columnIndex === undefined) {
@@ -44,13 +52,13 @@ export const includesText: FilterFn<Match> = (match, columnId, filterValue) => {
         columnIndexCache.set(columnId, columnIndex);
     }
     if (columnIndex === -1) return true;
-    
+
     // Данные уже очищены в API, просто сравниваем
     if (columnIndex >= 0 && match.original) {
         const value = String(match.original[columnIndex] ?? "");
         return value.toLowerCase().includes(filterValue.toLowerCase());
     }
-    
+
     // Fallback к простому сравнению если индекс невалидный
     const v = String(match.getValue(columnId) ?? "");
     return v.toLowerCase().includes(filterValue.toLowerCase());

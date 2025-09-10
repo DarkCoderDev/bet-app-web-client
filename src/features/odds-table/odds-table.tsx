@@ -15,7 +15,7 @@ import {
   FILTER_ORDER,
 } from "entities/match/consts.ts";
 import { signatures } from "entities/filter/signatures.ts";
-import { calculateBetResult, renderClean, getColumnIndex } from "./lib";
+import {calculateBetResult, renderClean, getColumnIndex, type BetResult} from "./lib";
 import { BetManagementService } from "entities/match/bet-management.ts";
 import { Controls } from "features/odds-table/modules/controls";
 import clsx from "clsx";
@@ -92,14 +92,10 @@ const applyPredicates = (
 };
 
 // --- Функция получения результата ставки для ячейки
-const getBetResultForCell = (columnId: string, Match: Match): boolean => {
-  // Получаем данные из строки
-  const scoreStr = String(Match[MatchIndexMap[MatchKeys.SCORE]] || ""); // Счет
-  const halfStr = String(
-    Match[MatchIndexMap[MatchKeys.FIRST_HALF_SCORE]] || ""
-  ); // 1 Тайм
+const getBetResultForCell = (columnId: string, Match: Match): BetResult | false => {
+  const scoreStr = String(Match[MatchIndexMap[MatchKeys.SCORE]] || "");
+  const halfStr = String(Match[MatchIndexMap[MatchKeys.FIRST_HALF_SCORE]] || "");
 
-  // Парсим счет
   const scoreMatch = scoreStr.match(/(\d+)-(\d+)/);
   const halfMatch = halfStr.match(/(\d+)-(\d+)/);
 
@@ -108,7 +104,6 @@ const getBetResultForCell = (columnId: string, Match: Match): boolean => {
   const homeScore = parseInt(scoreMatch[1]);
   const awayScore = parseInt(scoreMatch[2]);
 
-  // Маппинг колонок ставок на функцию расчета
   const betColumns = {
     [RusMatchKeys[MatchKeys.P1]]: true,
     [RusMatchKeys[MatchKeys.X]]: true,
@@ -330,7 +325,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
     // Загружаем выделенные матчи из localStorage
     const highlightedMatches = betService.getHighlightedMatches();
     console.log("Loaded highlighted matches from localStorage:", Array.from(highlightedMatches));
-    
+
     setHighlightedRows(highlightedMatches);
   }, [betService, dataSet]); // Добавляем dataSet как зависимость для обновления при изменении данных
 
@@ -539,8 +534,17 @@ export const OddsTable = React.memo(function OddsTable(props: {
       Object.entries(betIndices).forEach(([betType, index]) => {
         const coef = Number(match[index]);
         if (!isNaN(coef)) {
-          const isWin = getBetResultForCell(betType, match);
-          totals[betType] += isWin ? coef - 1 : -1;
+          const result = getBetResultForCell(betType, match);
+          switch (result) {
+            case "lose":
+              totals[betType] += - 1;
+              break;
+            case "win":
+              totals[betType] += coef - 1;
+              break;
+            default:
+              break;
+          }
         }
       });
     });
@@ -669,8 +673,11 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                 cell.column.id,
                                 match.original
                               );
-                              if (betResult === true)
-                                return "rgba(34, 197, 94, 0.2)"; // green
+                              if (betResult === "win") {
+                                return "rgba(34, 197, 94, 0.2)";
+                              } else if (betResult === "return") {
+                                return "rgba(253, 224, 71, 0.2)"
+                              }
                               return "transparent";
                             })(),
                           }}
@@ -743,7 +750,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                   String(cell.getValue() ?? "")
                                 );
 
-                                if (betResult === true) {
+                                if (betResult === "win") {
                                   return (
                                     <span className="text-green-300 font-semibold">
                                       {value}
