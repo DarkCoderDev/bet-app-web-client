@@ -1,7 +1,4 @@
-export type Match = [
-    string, string, string, string, string, string, string, string, string,
-    string, string, string, string, string, string, string, string, string, string
-];
+export type Match = string[];
 
 // Типы для сохраненных матчей
 export interface SavedMatch {

@@ -17,6 +17,10 @@ export const OVER3 = "over3";
 export const UNDER3 = "under3";
 export const BTTS_YES = "bttsYes";
 export const BTTS_NO = "bttsNo";
+export const MARGIN_1X2 = "margin_1x2";
+export const MARGIN_OU_2_5 = "margin_ou_2_5";
+export const MARGIN_OU_3 = "margin_ou_3";
+export const MARGIN_BTTS = "margin_btts";
 
 export const MatchKeys = {
     WD,
@@ -38,6 +42,10 @@ export const MatchKeys = {
     UNDER3,
     BTTS_YES,
     BTTS_NO,
+    MARGIN_1X2,
+    MARGIN_OU_2_5,
+    MARGIN_OU_3,
+    MARGIN_BTTS,
 } as const;
 
 export type DataKey = keyof typeof MatchIndexMap;
@@ -61,6 +69,10 @@ export const MatchIndexMap = {
     [UNDER3]: 16,
     [BTTS_YES]: 17,
     [BTTS_NO]: 18,
+    [MARGIN_1X2]: 19,
+    [MARGIN_OU_2_5]: 20,
+    [MARGIN_OU_3]: 21,
+    [MARGIN_BTTS]: 22,
 } as const;
 
 export const RusMatchKeys = {
@@ -83,6 +95,10 @@ export const RusMatchKeys = {
     [UNDER3]: 'ТМ3',
     [BTTS_YES]: 'Оз-да',
     [BTTS_NO]: 'Оз-нет',
+    [MARGIN_1X2]: 'Маржа 1X2',
+    [MARGIN_OU_2_5]: 'Маржа ТБ/ТМ2.5',
+    [MARGIN_OU_3]: 'Маржа ТБ/ТМ3',
+    [MARGIN_BTTS]: 'Маржа ОЗ',
 } as const;
 
 // Порядок полей для сохранения в URL
@@ -102,6 +118,10 @@ export const FILTER_ORDER = [
     RusMatchKeys[UNDER3],
     RusMatchKeys[BTTS_YES],
     RusMatchKeys[BTTS_NO],
+    RusMatchKeys[MARGIN_1X2],
+    RusMatchKeys[MARGIN_OU_2_5],
+    RusMatchKeys[MARGIN_OU_3],
+    RusMatchKeys[MARGIN_BTTS],
 ] as const;
 
 

@@ -68,6 +68,61 @@ async function processDataset() {
         // Очистка HTML и извлечение дат
         const processed = processDataWithDateExtraction(json);
 
+        // --- Добавление расчетов маржи ---
+        // Используем ту же идею truncate (усечение), что и в фронте: работаем со строками
+        const truncate = (value, digits = 2) => {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            const [intPart, fracPart = ''] = str.split('.');
+            if (digits == null || digits <= 0) return intPart + '.';
+            return intPart + '.' + fracPart.slice(0, digits).padEnd(digits, '0');
+        };
+
+        const toNum = (v) => {
+            const n = Number(v);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        };
+
+        const calcMargin3Way = (p1, px, p2) => {
+            const a = toNum(p1), b = toNum(px), c = toNum(p2);
+            if (a && b && c) {
+                const m = (1 / a + 1 / b + 1 / c - 1) * 100;
+                return truncate(m, 2);
+            }
+            return '';
+        };
+
+        const calcMargin2Way = (pa, pb) => {
+            const a = toNum(pa), b = toNum(pb);
+            if (a && b) {
+                const m = (1 / a + 1 / b - 1) * 100;
+                return truncate(m, 2);
+            }
+            return '';
+        };
+
+        if (processed.data && Array.isArray(processed.data)) {
+            processed.data = processed.data.map((row) => {
+                if (!Array.isArray(row)) return row;
+                const p1 = row[6];
+                const x = row[7];
+                const p2 = row[8];
+                const over25 = row[13];
+                const under25 = row[14];
+                const over3 = row[15];
+                const under3 = row[16];
+                const bttsYes = row[17];
+                const bttsNo = row[18];
+
+                const margin1x2 = calcMargin3Way(p1, x, p2);
+                const marginOu25 = calcMargin2Way(over25, under25);
+                const marginOu3 = calcMargin2Way(over3, under3);
+                const marginBtts = calcMargin2Way(bttsYes, bttsNo);
+
+                return [...row, margin1x2, marginOu25, marginOu3, marginBtts];
+            });
+        }
+
         // Сохраняем обратно
         fs.writeFileSync(filePath, JSON.stringify(processed));
         console.log('✅ Готово: public/dataset.json обновлен');

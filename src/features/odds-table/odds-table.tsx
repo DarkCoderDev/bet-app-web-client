@@ -143,6 +143,10 @@ const signatureKeyToColumnHeader: Record<string, string> = {
   [MatchKeys.UNDER3]: RusMatchKeys[MatchKeys.UNDER3],
   [MatchKeys.BTTS_YES]: RusMatchKeys[MatchKeys.BTTS_YES],
   [MatchKeys.BTTS_NO]: RusMatchKeys[MatchKeys.BTTS_NO],
+  [MatchKeys.MARGIN_1X2]: RusMatchKeys[MatchKeys.MARGIN_1X2],
+  [MatchKeys.MARGIN_OU_2_5]: RusMatchKeys[MatchKeys.MARGIN_OU_2_5],
+  [MatchKeys.MARGIN_OU_3]: RusMatchKeys[MatchKeys.MARGIN_OU_3],
+  [MatchKeys.MARGIN_BTTS]: RusMatchKeys[MatchKeys.MARGIN_BTTS],
 };
 
 type DataKey = keyof typeof MatchIndexMap;
@@ -226,14 +230,30 @@ const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
     label: RusMatchKeys[MatchKeys.BTTS_NO],
     widthClass: "w-12",
   },
+  { key: MatchKeys.MARGIN_1X2, label: RusMatchKeys[MatchKeys.MARGIN_1X2], widthClass: "w-14" },
+  { key: MatchKeys.MARGIN_OU_2_5, label: RusMatchKeys[MatchKeys.MARGIN_OU_2_5], widthClass: "w-16" },
+  { key: MatchKeys.MARGIN_OU_3, label: RusMatchKeys[MatchKeys.MARGIN_OU_3], widthClass: "w-14" },
+  { key: MatchKeys.MARGIN_BTTS, label: RusMatchKeys[MatchKeys.MARGIN_BTTS], widthClass: "w-12" },
 ];
 
 const columns: ColumnDef<Match, string>[] = [
   ...dataColumns.map((c) =>
-    columnHelper.accessor((row) => row[MatchIndexMap[c.key]], {
+    columnHelper.accessor((row) => (row as any)[MatchIndexMap[c.key]], {
       id: c.label,
       header: c.label,
-      cell: (ctx) => renderClean(String(ctx.getValue() ?? "")),
+      cell: (ctx) => {
+        const value = String(ctx.getValue() ?? "");
+        // Для колонок маржи сразу показываем c символом %
+        if (
+          c.key === MatchKeys.MARGIN_1X2 ||
+          c.key === MatchKeys.MARGIN_OU_2_5 ||
+          c.key === MatchKeys.MARGIN_OU_3 ||
+          c.key === MatchKeys.MARGIN_BTTS
+        ) {
+          return value ? `${value}%` : '';
+        }
+        return renderClean(value);
+      },
       meta: { widthClass: c.widthClass },
     })
   ),
@@ -368,7 +388,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
             );
             if (columnIndex !== -1) {
               const value = String(
-                match[MatchIndexMap[dataColumns[columnIndex].key]] || ""
+                (match as any)[MatchIndexMap[dataColumns[columnIndex].key]] || ""
               );
               clearedInputs[columnHeader] = field.transform(value);
             }
