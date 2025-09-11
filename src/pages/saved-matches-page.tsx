@@ -94,16 +94,16 @@ export const SavedMatchesPage: React.FC = () => {
         try {
             // Загружаем датасет при нажатии кнопки
             const currentDataset = await getDataSet();
-            
+
             const result = betService.syncWithDataset(currentDataset);
-            
+
             if (result.updated > 0) {
                 loadSavedMatches();
                 toast.success(`Синхронизировано ${result.updated} матчей`);
             } else {
                 toast('Нет матчей для обновления');
             }
-            
+
             if (result.errors > 0) {
                 toast.error(`Ошибок при синхронизации: ${result.errors}`);
             }
@@ -159,7 +159,7 @@ export const SavedMatchesPage: React.FC = () => {
 
             const dataStr = JSON.stringify(exportData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            
+
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
@@ -194,9 +194,9 @@ export const SavedMatchesPage: React.FC = () => {
 
                 // Валидация каждого матча
                 const validMatches = importData.matches.filter((match: any) => {
-                    return match.id && 
-                           match.timestamp && 
-                           match.matchData && 
+                    return match.id &&
+                           match.timestamp &&
+                           match.matchData &&
                            match.filterValues &&
                            typeof match.matchData === 'object' &&
                            typeof match.filterValues === 'object';
@@ -209,10 +209,10 @@ export const SavedMatchesPage: React.FC = () => {
                 // Объединяем с существующими данными
                 const existingMatches = betService.getSavedMatches();
                 const existingIds = new Set(existingMatches.map(m => m.id));
-                
+
                 // Добавляем только новые матчи (по ID)
                 const newMatches = validMatches.filter((match: SavedMatch) => !existingIds.has(match.id));
-                
+
                 // Сохраняем новые матчи
                 newMatches.forEach((m: SavedMatch) => {
                     // для импорта используем restoreMatch, если есть, иначе сохраняем через saveMatch
@@ -228,7 +228,7 @@ export const SavedMatchesPage: React.FC = () => {
                 loadSavedMatches();
 
                 toast.success(`Импортировано ${newMatches.length} новых матчей из ${validMatches.length} в файле`);
-                
+
                 // Очищаем input
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
@@ -301,7 +301,7 @@ export const SavedMatchesPage: React.FC = () => {
         if (match.scoreSource === 'manual') {
             return false; // Ручной ввод - показываем input
         }
-        
+
         // Проверяем, есть ли счет и не является ли он пустым или placeholder
         const score = match.matchData.score;
         return score && score.trim() !== '' && score !== 'undefined' && score !== 'null' && score !== 'Не завершен';
@@ -371,7 +371,7 @@ export const SavedMatchesPage: React.FC = () => {
     return (
         <div className="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
             <main className="flex-1 overflow-auto">
-                <div className="container mx-auto px-4 py-3 pb-4">
+                <div className="w-325 mx-auto px-4 py-3 pb-4">
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <h1 className="text-2xl font-bold text-white">Сохраненные матчи</h1>
@@ -541,58 +541,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                             </div>
                                                                         </div>
 
-                                                                        {/* Центральная часть: Фильтрация */}
-                                                                        <div className="flex-1 flex justify-center">
-                                                                            <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
-                                                                                <div className="flex items-center">
-                                                                                    {[
-                                                                                        'Лига',
-                                                                                        'П1',
-                                                                                        'Х',
-                                                                                        'П2',
-                                                                                        'Ф1(0)',
-                                                                                        'Ф2(0)',
-                                                                                        '1 заб',
-                                                                                        '2 заб',
-                                                                                        'ТБ2.5',
-                                                                                        'ТМ2.5',
-                                                                                        'ТБ3',
-                                                                                        'ТМ3',
-                                                                                        'Оз-да',
-                                                                                        'Оз-нет'
-                                                                                    ].map((columnKey) => {
-                                                                                        const value = match.filterValues[columnKey]?.trim() || '';
-                                                                                        return (
-                                                                                            <div key={columnKey} className="flex items-center">
-                                                                                                <div className="px-2 py-1 text-xs text-center min-w-[50px]">
-                                                                                                    <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
-                                                                                                        {columnKey}
-                                                                                                    </div>
-                                                                                                    <div className="text-white font-bold text-xs leading-none">
-                                                                                                        {value || '—'}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <div className="w-px h-6 bg-slate-500/30"></div>
-                                                                                            </div>
-                                                                                        );
-                                                                                    })}
-                                                                                    {/* Кнопка применить фильтр */}
-                                                                                    <div className="flex items-center">
-                                                                                        <div className="px-2 py-1 text-xs text-center min-w-[50px]">
-                                                                                            <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
-                                                                                                Действие
-                                                                                            </div>
-                                                                                            <button
-                                                                                                onClick={() => handleApplyFilters(match.filterValues)}
-                                                                                                className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
-                                                                                            >
-                                                                                                Применить
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
+
 
                                                                         {/* Правая часть: Удаление */}
                                                                         <div className="flex items-center min-w-0">
@@ -602,6 +551,62 @@ export const SavedMatchesPage: React.FC = () => {
                                                                             >
                                                                                 ✕
                                                                             </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    {/* Центральная часть: Фильтрация */}
+                                                                    <div className="mt-2 flex-1 flex justify-center">
+                                                                        <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
+                                                                            <div className="flex items-center">
+                                                                                {[
+                                                                                    'Лига',
+                                                                                    'П1',
+                                                                                    'Х',
+                                                                                    'П2',
+                                                                                    'Ф1(0)',
+                                                                                    'Ф2(0)',
+                                                                                    '1 заб',
+                                                                                    '2 заб',
+                                                                                    'ТБ2.5',
+                                                                                    'ТМ2.5',
+                                                                                    'ТБ3',
+                                                                                    'ТМ3',
+                                                                                    'Оз-да',
+                                                                                    'Оз-нет',
+                                                                                    'Маржа 1X2',
+                                                                                    'Маржа ТБ/ТМ2.5',
+                                                                                    'Маржа ТБ/ТМ3',
+                                                                                    'Маржа ОЗ'
+                                                                                ].map((columnKey) => {
+                                                                                    const value = match.filterValues[columnKey]?.trim() || '';
+                                                                                    return (
+                                                                                        <div key={columnKey} className="flex items-center">
+                                                                                            <div className="px-2 py-1 text-xs text-center min-w-[50px]">
+                                                                                                <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
+                                                                                                    {columnKey}
+                                                                                                </div>
+                                                                                                <div className="text-white font-bold text-xs leading-none">
+                                                                                                    {value || '—'}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div className="w-px h-6 bg-slate-500/30"></div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                                {/* Кнопка применить фильтр */}
+                                                                                <div className="flex items-center">
+                                                                                    <div className="px-2 py-1 text-xs text-center min-w-[50px]">
+                                                                                        <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
+                                                                                            Действие
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={() => handleApplyFilters(match.filterValues)}
+                                                                                            className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
+                                                                                        >
+                                                                                            Применить
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -715,58 +720,7 @@ export const SavedMatchesPage: React.FC = () => {
                                                                             </div>
                                                                         </div>
 
-                                                                        {/* Центральная часть: Фильтрация */}
-                                                                        <div className="flex-1 flex justify-center">
-                                                                            <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
-                                                                                <div className="flex items-center">
-                                                                                    {[
-                                                                                        'Лига',
-                                                                                        'П1',
-                                                                                        'Х',
-                                                                                        'П2',
-                                                                                        'Ф1(0)',
-                                                                                        'Ф2(0)',
-                                                                                        '1 заб',
-                                                                                        '2 заб',
-                                                                                        'ТБ2.5',
-                                                                                        'ТМ2.5',
-                                                                                        'ТБ3',
-                                                                                        'ТМ3',
-                                                                                        'Оз-да',
-                                                                                        'Оз-нет'
-                                                                                    ].map((columnKey) => {
-                                                                                        const value = match.filterValues[columnKey]?.trim() || '';
-                                                                                        return (
-                                                                                            <div key={columnKey} className="flex items-center">
-                                                                                                <div className="px-2 py-1 text-xs text-center min-w-[50px]">
-                                                                                                    <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
-                                                                                                        {columnKey}
-                                                                                                    </div>
-                                                                                                    <div className="text-white font-bold text-xs leading-none">
-                                                                                                        {value || '—'}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <div className="w-px h-6 bg-slate-500/30"></div>
-                                                                                            </div>
-                                                                                        );
-                                                                                    })}
-                                                                                    {/* Кнопка применить фильтр */}
-                                                                                    <div className="flex items-center">
-                                                                                        <div className="px-2 py-1 text-xs text-center min-w-[50px]">
-                                                                                            <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
-                                                                                                Действие
-                                                                                            </div>
-                                                                                            <button
-                                                                                                onClick={() => handleApplyFilters(match.filterValues)}
-                                                                                                className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
-                                                                                            >
-                                                                                                Применить
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
+
 
                                                                         {/* Правая часть: Удаление */}
                                                                         <div className="flex items-center min-w-0">
@@ -776,6 +730,63 @@ export const SavedMatchesPage: React.FC = () => {
                                                                             >
                                                                                 ✕
                                                                             </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Центральная часть: Фильтрация */}
+                                                                    <div className="mt-2 flex-1 flex justify-center">
+                                                                        <div className="bg-gradient-to-r from-slate-800/70 to-slate-700/50 rounded-lg border border-slate-500/40 shadow-lg backdrop-blur-sm">
+                                                                            <div className="flex items-center">
+                                                                                {[
+                                                                                    'Лига',
+                                                                                    'П1',
+                                                                                    'Х',
+                                                                                    'П2',
+                                                                                    'Ф1(0)',
+                                                                                    'Ф2(0)',
+                                                                                    '1 заб',
+                                                                                    '2 заб',
+                                                                                    'ТБ2.5',
+                                                                                    'ТМ2.5',
+                                                                                    'ТБ3',
+                                                                                    'ТМ3',
+                                                                                    'Оз-да',
+                                                                                    'Оз-нет',
+                                                                                    'Маржа 1X2',
+                                                                                    'Маржа ТБ/ТМ2.5',
+                                                                                    'Маржа ТБ/ТМ3',
+                                                                                    'Маржа ОЗ'
+                                                                                ].map((columnKey) => {
+                                                                                    const value = match.filterValues[columnKey]?.trim() || '';
+                                                                                    return (
+                                                                                        <div key={columnKey} className="flex items-center">
+                                                                                            <div className="px-2 py-1 text-xs text-center min-w-[50px]">
+                                                                                                <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
+                                                                                                    {columnKey}
+                                                                                                </div>
+                                                                                                <div className="text-white font-bold text-xs leading-none">
+                                                                                                    {value || '—'}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div className="w-px h-6 bg-slate-500/30"></div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                                {/* Кнопка применить фильтр */}
+                                                                                <div className="flex items-center">
+                                                                                    <div className="px-2 py-1 text-xs text-center min-w-[50px]">
+                                                                                        <div className="text-slate-300 font-semibold mb-0.5 leading-none whitespace-nowrap">
+                                                                                            Действие
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={() => handleApplyFilters(match.filterValues)}
+                                                                                            className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 relative z-10"
+                                                                                        >
+                                                                                            Применить
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
