@@ -81,3 +81,45 @@ html, body, #root {
     transform: translateY(0);
   }
 }
+
+/* === Custom Scrollbar (Global) === */
+/* Firefox */
+html {
+  scrollbar-width: thin;                 /* thin | auto */
+  scrollbar-color: #475569 #0f172a;      /* thumb | track */
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+/* Default vertical/horizontal size */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Track */
+*::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.85);    /* slate-900/85 */
+  border: 1px solid rgba(100, 116, 139, 0.25); /* slate-500/25 */
+  border-radius: 8px;
+}
+
+/* Thumb */
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.95), rgba(30, 41, 59, 0.95)); /* slate-700 -> slate-800 */
+  border: 1px solid rgba(71, 85, 105, 0.6);   /* slate-600 */
+  border-radius: 8px;
+}
+
+/* Thumb hover/active */
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.9)); /* blue-500 -> blue-800 */
+  border-color: rgba(37, 99, 235, 0.8);
+}
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.95), rgba(30, 58, 138, 0.95));
+}
+
+/* Remove corner artifact on macOS when both axes scroll */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
