@@ -66,6 +66,26 @@ const writeFiltersToURL = (
   setSearchParams(sp);
 };
 
+const numericColumnHeaders = new Set<string>([
+  RusMatchKeys[MatchKeys.P1],
+  RusMatchKeys[MatchKeys.X],
+  RusMatchKeys[MatchKeys.P2],
+  RusMatchKeys[MatchKeys.HANDICAP1_0],
+  RusMatchKeys[MatchKeys.HANDICAP2_0],
+  RusMatchKeys[MatchKeys.ONE_TO_SCORE],
+  RusMatchKeys[MatchKeys.TWO_TO_SCORE],
+  RusMatchKeys[MatchKeys.OVER2_5],
+  RusMatchKeys[MatchKeys.UNDER2_5],
+  RusMatchKeys[MatchKeys.OVER3],
+  RusMatchKeys[MatchKeys.UNDER3],
+  RusMatchKeys[MatchKeys.BTTS_YES],
+  RusMatchKeys[MatchKeys.BTTS_NO],
+  RusMatchKeys[MatchKeys.MARGIN_1X2],
+  RusMatchKeys[MatchKeys.MARGIN_OU_2_5],
+  RusMatchKeys[MatchKeys.MARGIN_OU_3],
+  RusMatchKeys[MatchKeys.MARGIN_BTTS],
+]);
+
 const applyPredicates = (
   data: Match[],
   filters: Record<string, string>
@@ -77,8 +97,11 @@ const applyPredicates = (
     const idx = getColumnIndex(label);
     const q = raw.toLowerCase();
     return (row: Match) => {
-      const rawValue = String(row[idx] ?? "");
-      const val = renderClean(rawValue).toLowerCase();
+      const rawValue = row[idx] ?? "";
+      const val = String(rawValue).toLowerCase();
+      if (numericColumnHeaders.has(label)) {
+        return val.startsWith(q);
+      }
       return val.includes(q);
     };
   });
@@ -170,6 +193,11 @@ const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
   {
     key: MatchKeys.FIRST_HALF_SCORE,
     label: RusMatchKeys[MatchKeys.FIRST_HALF_SCORE],
+    widthClass: "w-12",
+  },
+  {
+    key: MatchKeys.SECOND_HALF_SCORE,
+    label: RusMatchKeys[MatchKeys.SECOND_HALF_SCORE],
     widthClass: "w-12",
   },
   {

@@ -3,6 +3,7 @@ export const LEAGUE = "league";
 export const DATE = "date";
 export const SCORE = "score";
 export const FIRST_HALF_SCORE = "firstHalfScore";
+export const SECOND_HALF_SCORE = "secondHalfScore";
 export const TEAMS = "teams";
 export const P1 = "p1";
 export const X = "x";
@@ -28,6 +29,7 @@ export const MatchKeys = {
     DATE,
     SCORE,
     FIRST_HALF_SCORE,
+    SECOND_HALF_SCORE,
     TEAMS,
     P1,
     X,
@@ -55,24 +57,25 @@ export const MatchIndexMap = {
     [DATE]: 2,
     [SCORE]: 3,
     [FIRST_HALF_SCORE]: 4,
-    [TEAMS]: 5,
-    [P1]: 6,
-    [X]: 7,
-    [P2]: 8,
-    [HANDICAP1_0]: 9,
-    [HANDICAP2_0]: 10,
-    [ONE_TO_SCORE]: 11,
-    [TWO_TO_SCORE]: 12,
-    [OVER2_5]: 13,
-    [UNDER2_5]: 14,
-    [OVER3]: 15,
-    [UNDER3]: 16,
-    [BTTS_YES]: 17,
-    [BTTS_NO]: 18,
-    [MARGIN_1X2]: 19,
-    [MARGIN_OU_2_5]: 20,
-    [MARGIN_OU_3]: 21,
-    [MARGIN_BTTS]: 22,
+    [SECOND_HALF_SCORE]: 5,
+    [TEAMS]: 6,
+    [P1]: 7,
+    [X]: 8,
+    [P2]: 9,
+    [HANDICAP1_0]: 10,
+    [HANDICAP2_0]: 11,
+    [ONE_TO_SCORE]: 12,
+    [TWO_TO_SCORE]: 13,
+    [OVER2_5]: 14,
+    [UNDER2_5]: 15,
+    [OVER3]: 16,
+    [UNDER3]: 17,
+    [BTTS_YES]: 18,
+    [BTTS_NO]: 19,
+    [MARGIN_1X2]: 20,
+    [MARGIN_OU_2_5]: 21,
+    [MARGIN_OU_3]: 22,
+    [MARGIN_BTTS]: 23,
 } as const;
 
 export const RusMatchKeys = {
@@ -81,6 +84,7 @@ export const RusMatchKeys = {
     [DATE]: 'Дата',
     [SCORE]: 'Счет',
     [FIRST_HALF_SCORE]: '1 тайм',
+    [SECOND_HALF_SCORE]: '2 тайм',
     [TEAMS]: 'Команды',
     [P1]: 'П1',
     [X]: 'Х',
@@ -108,6 +112,7 @@ export const FILTER_ORDER = [
     RusMatchKeys[P1],
     RusMatchKeys[X],
     RusMatchKeys[P2],
+    RusMatchKeys[SECOND_HALF_SCORE],
     RusMatchKeys[HANDICAP1_0],
     RusMatchKeys[HANDICAP2_0],
     RusMatchKeys[ONE_TO_SCORE],
