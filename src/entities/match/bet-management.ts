@@ -143,8 +143,10 @@ export class BetManagementService {
         const matches = this.getMatchesByTab(tab);
 
         if (tab === 'history') {
-            // Для history просто группируем по дате
+            // Для history группируем по дате и сортируем
             const groups: Record<string, SavedMatch[]> = {};
+            
+            // Сначала группируем по дате
             matches.forEach(match => {
                 const dateKey = this.formatMatchDate(match.matchData.date);
                 if (!groups[dateKey]) {
@@ -152,7 +154,29 @@ export class BetManagementService {
                 }
                 groups[dateKey].push(match);
             });
-            return groups;
+            
+            // Сортируем матчи внутри каждой группы по времени
+            Object.keys(groups).forEach(dateKey => {
+                groups[dateKey].sort((a, b) => {
+                    const timeA = this.parseMatchTime(a.matchData.date);
+                    const timeB = this.parseMatchTime(b.matchData.date);
+                    return timeA - timeB;
+                });
+            });
+            
+            // Сортируем группы по дате (от новых к старым)
+            const sortedGroups: Record<string, SavedMatch[]> = {};
+            const sortedKeys = Object.keys(groups).sort((a, b) => {
+                const dateA = this.parseMatchDate(groups[a][0].matchData.date);
+                const dateB = this.parseMatchDate(groups[b][0].matchData.date);
+                return dateB.getTime() - dateA.getTime(); // Сортировка от новых к старым
+            });
+            
+            sortedKeys.forEach(key => {
+                sortedGroups[key] = groups[key];
+            });
+            
+            return sortedGroups;
         }
 
         // Для today группируем по времени с разницей до 30 минут
@@ -201,6 +225,15 @@ export class BetManagementService {
                 });
             }
         });
+
+        // Сортируем группы по времени
+        timeGroups.sort((a, b) => {
+            if (a.matchDate.getTime() !== b.matchDate.getTime()) {
+                return a.matchDate.getTime() - b.matchDate.getTime();
+            }
+            return a.matchTime - b.matchTime;
+        });
+        
 
         // Формируем ключи для групп
         const groupedMatches: Record<string, SavedMatch[]> = {};

@@ -13,6 +13,8 @@ export const SavedMatchesPage: React.FC = () => {
     const [historyMatches, setHistoryMatches] = useState<Record<string, SavedMatch[]>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [todaySortOrder, setTodaySortOrder] = useState<'asc' | 'desc'>('desc');
+    const [historySortOrder, setHistorySortOrder] = useState<'asc' | 'desc'>('asc');
 
     const betService = BetManagementService.getInstance();
     const navigate = useNavigate();
@@ -309,7 +311,14 @@ export const SavedMatchesPage: React.FC = () => {
 
     const formatDateTime = (dateStr: string) => {
         try {
-            const date = new Date(dateStr);
+            // Парсим дату в формате dd.mm.yy HH:MM
+            const [datePart, timePart] = dateStr.split(' ');
+            const [day, month, year] = datePart.split('.');
+            
+            // Создаем дату в правильном формате (yyyy-mm-dd)
+            const fullYear = '20' + year; // Преобразуем yy в yyyy
+            const date = new Date(`${fullYear}-${month}-${day} ${timePart || ''}`);
+            
             return {
                 date: date.toLocaleDateString('ru-RU', {
                     day: '2-digit',
@@ -321,7 +330,8 @@ export const SavedMatchesPage: React.FC = () => {
                     minute: '2-digit'
                 })
             };
-        } catch {
+        } catch (error) {
+            console.error('Error formatting date:', error, 'Input:', dateStr);
             return { date: dateStr, time: '' };
         }
     };
@@ -335,6 +345,71 @@ export const SavedMatchesPage: React.FC = () => {
             default:
                 return 'bg-gradient-to-r from-slate-800/60 to-slate-700/40 border-slate-600/50 shadow-slate-500/10';
         }
+    };
+
+    // Функция для правильного парсинга даты в формате dd.mm.yy HH:MM
+    const parseDateForSorting = (dateStr: string): Date => {
+        try {
+            const [datePart, timePart] = dateStr.split(' ');
+            const [day, month, year] = datePart.split('.');
+            const fullYear = '20' + year;
+            return new Date(`${fullYear}-${month}-${day} ${timePart || ''}`);
+        } catch {
+            return new Date();
+        }
+    };
+
+    // Функции сортировки
+    const sortTodayMatches = () => {
+        const sorted = { ...todayMatches };
+        const sortedKeys = Object.keys(sorted).sort((a, b) => {
+            const groupA = sorted[a];
+            const groupB = sorted[b];
+            
+            if (groupA.length === 0 || groupB.length === 0) return 0;
+            
+            const dateA = parseDateForSorting(groupA[0].matchData.date);
+            const dateB = parseDateForSorting(groupB[0].matchData.date);
+            
+            return todaySortOrder === 'asc' 
+                ? dateA.getTime() - dateB.getTime()
+                : dateB.getTime() - dateA.getTime();
+        });
+        
+        const newSorted: Record<string, SavedMatch[]> = {};
+        sortedKeys.forEach(key => {
+            newSorted[key] = sorted[key];
+        });
+        
+        setTodayMatches(newSorted);
+        setTodaySortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        
+    };
+
+    const sortHistoryMatches = () => {
+        const sorted = { ...historyMatches };
+        const sortedKeys = Object.keys(sorted).sort((a, b) => {
+            const groupA = sorted[a];
+            const groupB = sorted[b];
+            
+            if (groupA.length === 0 || groupB.length === 0) return 0;
+            
+            const dateA = parseDateForSorting(groupA[0].matchData.date);
+            const dateB = parseDateForSorting(groupB[0].matchData.date);
+            
+            return historySortOrder === 'asc' 
+                ? dateA.getTime() - dateB.getTime()
+                : dateB.getTime() - dateA.getTime();
+        });
+        
+        const newSorted: Record<string, SavedMatch[]> = {};
+        sortedKeys.forEach(key => {
+            newSorted[key] = sorted[key];
+        });
+        
+        setHistoryMatches(newSorted);
+        setHistorySortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        
     };
 
     const getMatchStats = () => {
@@ -447,11 +522,23 @@ export const SavedMatchesPage: React.FC = () => {
                             {/* Сегодняшние матчи */}
                             {Object.keys(todayMatches).length > 0 && (
                                 <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <h2 className="text-lg font-bold text-white">Сегодня</h2>
-                                        <span className="px-2 py-1 bg-gray-500/20 text-white  text-xs rounded-full">
-                                            {stats.todayMatches}
-                                        </span>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-lg font-bold text-white">Сегодня</h2>
+                                            <span className="px-2 py-1 bg-gray-500/20 text-white  text-xs rounded-full">
+                                                {stats.todayMatches}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={sortTodayMatches}
+                                            className="flex items-center gap-1 px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded-md transition-colors"
+                                            title={`Сортировать по дате ${todaySortOrder === 'asc' ? '↓' : '↑'}`}
+                                        >
+                                            <span>Дата</span>
+                                            <span className="text-xs">
+                                                {todaySortOrder === 'asc' ? '↓' : '↑'}
+                                            </span>
+                                        </button>
                                     </div>
 
                                     <div className="space-y-2">
@@ -623,11 +710,23 @@ export const SavedMatchesPage: React.FC = () => {
                             {/* Исторические матчи */}
                             {Object.keys(historyMatches).length > 0 && (
                                 <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <h2 className="text-lg font-bold text-white">История</h2>
-                                        <span className="px-2 py-1 bg-gray-500/20 text-white text-xs rounded-full">
-                                            {stats.historyMatches}
-                                        </span>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-lg font-bold text-white">История</h2>
+                                            <span className="px-2 py-1 bg-gray-500/20 text-white text-xs rounded-full">
+                                                {stats.historyMatches}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={sortHistoryMatches}
+                                            className="flex items-center gap-1 px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded-md transition-colors"
+                                            title={`Сортировать по дате ${historySortOrder === 'asc' ? '↓' : '↑'}`}
+                                        >
+                                            <span>Дата</span>
+                                            <span className="text-xs">
+                                                {historySortOrder === 'asc' ? '↓' : '↑'}
+                                            </span>
+                                        </button>
                                     </div>
 
                                     <div className="space-y-2">
