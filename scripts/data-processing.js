@@ -3,13 +3,14 @@ import path from 'path';
 
 // Очистка HTML-тегов
 function cleanHtml(htmlString) {
-    if (typeof htmlString !== 'string') return htmlString;
     return htmlString
-        .replace(/<br\s*\/>?/gi, ' ')
-        .replace(/<div[^>]*>.*?<\/div>/gi, '')
-        .replace(/<[^>]*>/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    // if (typeof htmlString !== 'string') return htmlString;
+    // return htmlString
+    //     .replace(/<br\s*\/>?/gi, ' ')
+    //     .replace(/<div[^>]*>.*?<\/div>/gi, '')
+    //     .replace(/<[^>]*>/g, '')
+    //     .replace(/\s+/g, ' ')
+    //     .trim();
 }
 
 // Достаем epoch из колонки даты (3-я колонка)
@@ -48,7 +49,8 @@ function processDataWithDateExtraction(data) {
 }
 
 async function processDataset() {
-    const filePath = path.join(process.cwd(), 'public', 'dataset.json');
+    const filePath = path.join(process.cwd(), '../public', 'dataset.json');
+    console.log(filePath)
     console.log('🚀 Обрабатываю файл:', filePath);
 
     if (!fs.existsSync(filePath)) {

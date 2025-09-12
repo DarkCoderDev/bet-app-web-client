@@ -123,3 +123,11 @@ html {
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+.toto {
+  position: absolute;
+  top: 50%;
+  background: #721c24;
+  padding: 3px;
+  font-size: 9px;
+}

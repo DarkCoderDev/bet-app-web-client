@@ -66,6 +66,7 @@ export const includesText: FilterFn<Match> = (match, columnId, filterValue) => {
 
 // Функция отображения - данные уже очищены на сервере
 export const renderClean = (v: string) => {
+
     return v;
 };
 
