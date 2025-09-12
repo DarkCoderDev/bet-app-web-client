@@ -271,15 +271,6 @@ const columns: ColumnDef<Match, string>[] = [
       header: c.label,
       cell: (ctx) => {
         const value = String(ctx.getValue() ?? "");
-        // Для колонок маржи сразу показываем c символом %
-        if (
-          c.key === MatchKeys.MARGIN_1X2 ||
-          c.key === MatchKeys.MARGIN_OU_2_5 ||
-          c.key === MatchKeys.MARGIN_OU_3 ||
-          c.key === MatchKeys.MARGIN_BTTS
-        ) {
-          return value ? `${value}%` : '';
-        }
         return renderClean(value);
       },
       meta: { widthClass: c.widthClass },
@@ -589,6 +580,9 @@ export const OddsTable = React.memo(function OddsTable(props: {
               break;
             case "win":
               totals[betType] += coef - 1;
+              break;
+            case "return":
+              totals[betType] += 0;
               break;
             default:
               break;

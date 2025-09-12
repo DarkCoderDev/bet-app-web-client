@@ -27,7 +27,7 @@ export interface SavedMatch {
     filterValues: Record<string, string>; // Сохраненные значения фильтров
     bet?: string; // Сумма ставки
     betType?: string; // Тип ставки
-    betResult?: 'won' | 'lost' | ''; // Результат ставки
+    betResult?: 'won' | 'lost' | 'return' | ''; // Результат ставки
     finalScore?: string; // Финальный счет
     isHighlighted?: boolean; // Подсвечен ли матч в таблице
     lastSyncDate?: string; // Дата последней синхронизации с датасетом

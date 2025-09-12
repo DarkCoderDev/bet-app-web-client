@@ -52,7 +52,7 @@ export const SavedMatchesPage: React.FC = () => {
         }
     };
 
-    const handleUpdateBetResult = (id: string, result: 'won' | 'lost' | '') => {
+    const handleUpdateBetResult = (id: string, result: 'won' | 'lost' | 'return' | '') => {
         const current = betService.getSavedMatches().find(m => m.id === id)?.betResult || '';
         const next = current === result ? '' : result;
         betService.updateMatch(id, { betResult: next });
@@ -274,26 +274,94 @@ export const SavedMatchesPage: React.FC = () => {
     //     }
     // };
 
-    const formatGroupTime = (matches: SavedMatch[]) => {
+    // Функция для парсинга даты в формате 'dd.mm.yy HH:MM'
+    const parseCustomDate = (dateString: string): Date | null => {
+        try {
+            // Парсим формат '13.09.25 01:00'
+            const match = dateString.match(/(\d{1,2})\.(\d{1,2})\.(\d{2})\s+(\d{1,2}):(\d{2})/);
+            if (!match) {
+                console.error('Date format not recognized:', dateString);
+                return null;
+            }
+
+            const [, day, month, year, hour, minute] = match;
+            // Преобразуем 2-значный год в 4-значный (25 -> 2025)
+            const fullYear = `20${year}`;
+            
+            // Создаем дату в формате ISO: YYYY-MM-DD HH:MM
+            const isoString = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute}:00`;
+            
+            console.log('parseCustomDate:', {
+                original: dateString,
+                parsed: { day, month, year: fullYear, hour, minute },
+                isoString
+            });
+            
+            const date = new Date(isoString);
+            return isNaN(date.getTime()) ? null : date;
+        } catch (error) {
+            console.error('Error parsing custom date:', dateString, error);
+            return null;
+        }
+    };
+
+    const formatGroupTime = (matches: SavedMatch[], section: 'today' | 'history' = 'history') => {
         if (matches.length === 0) return '';
 
         // Находим самый ранний матч в группе
         const earliestMatch = matches.reduce((earliest, current) => {
-            const earliestTime = new Date(earliest.matchData.date).getTime();
-            const currentTime = new Date(current.matchData.date).getTime();
+            const earliestTime = parseCustomDate(earliest.matchData.date)?.getTime() || 0;
+            const currentTime = parseCustomDate(current.matchData.date)?.getTime() || 0;
             return currentTime < earliestTime ? current : earliest;
+        });
+
+        // Логирование для отладки
+        console.log('formatGroupTime DEBUG:', {
+            section,
+            matchesCount: matches.length,
+            earliestMatchDate: earliestMatch.matchData.date,
+            dateType: typeof earliestMatch.matchData.date
         });
 
         // Форматируем дату и время
         try {
-            const date = new Date(earliestMatch.matchData.date);
-            return date.toLocaleString('ru-RU', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+            // Используем кастомную функцию парсинга
+            const date = parseCustomDate(earliestMatch.matchData.date);
+            
+            console.log('formatGroupTime parsed date:', {
+                originalDate: earliestMatch.matchData.date,
+                parsedDate: date,
+                isValid: date !== null,
+                timestamp: date?.getTime()
             });
-        } catch {
+            
+            // Проверяем что дата валидна
+            if (!date) {
+                console.error('Invalid date detected:', earliestMatch.matchData.date);
+                return 'Некорректная дата';
+            }
+            
+            if (section === 'today') {
+                // Для секции "Сегодня" показываем только время
+                const timeResult = date.toLocaleString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                console.log('formatGroupTime today result:', timeResult);
+                return timeResult;
+            } else {
+                // Для секции "История" показываем дату и время
+                const fullResult = date.toLocaleString('ru-RU', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                console.log('formatGroupTime history result:', fullResult);
+                return fullResult;
+            }
+        } catch (error) {
+            console.error('formatGroupTime error:', error, 'original date:', earliestMatch.matchData.date);
             return earliestMatch.matchData.date;
         }
     };
@@ -342,6 +410,8 @@ export const SavedMatchesPage: React.FC = () => {
                 return 'bg-gradient-to-r from-green-500/15 to-emerald-500/10 border-green-400/40 shadow-green-500/20';
             case 'lost':
                 return 'bg-gradient-to-r from-red-500/15 to-rose-500/10 border-red-400/40 shadow-red-500/20';
+            case 'return':
+                return 'bg-gradient-to-r from-yellow-500/15 to-amber-500/10 border-yellow-400/40 shadow-yellow-500/20';
             default:
                 return 'bg-gradient-to-r from-slate-800/60 to-slate-700/40 border-slate-600/50 shadow-slate-500/10';
         }
@@ -417,16 +487,18 @@ export const SavedMatchesPage: React.FC = () => {
         const todayCount = Object.values(todayMatches).flat().length;
         const historyCount = Object.values(historyMatches).flat().length;
 
-        // Подсчет выигранных и проигранных матчей
+        // Подсчет выигранных, проигранных и возвращенных матчей
         const wonMatches = savedMatches.filter(match => match.betResult === 'won').length;
         const lostMatches = savedMatches.filter(match => match.betResult === 'lost').length;
+        const returnMatches = savedMatches.filter(match => match.betResult === 'return').length;
 
         return {
             totalMatches,
             todayMatches: todayCount,
             historyMatches: historyCount,
             wonMatches,
-            lostMatches
+            lostMatches,
+            returnMatches
         };
     };
 
@@ -495,6 +567,10 @@ export const SavedMatchesPage: React.FC = () => {
                             <span className="text-sm font-bold text-green-400">{stats.wonMatches}</span>
                         </div>
                         <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-400">Возврат:</span>
+                            <span className="text-sm font-bold text-yellow-400">{stats.returnMatches}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
                             <span className="text-xs text-slate-400">Проиграно:</span>
                             <span className="text-sm font-bold text-red-400">{stats.lostMatches}</span>
                         </div>
@@ -546,7 +622,7 @@ export const SavedMatchesPage: React.FC = () => {
                                             <div key={groupKey} className="bg-slate-800/50 rounded border border-slate-700">
                                                 <div className="p-2 border-b border-slate-700">
                                                     <h3 className="text-sm font-semibold text-white">
-                                                        {formatGroupTime(matches)}
+                                                        {formatGroupTime(matches, 'today')}
                                                     </h3>
                                                 </div>
 
@@ -613,6 +689,16 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                         }`}
                                                                                     >
                                                                                         W
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleUpdateBetResult(match.id, 'return')}
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
+                                                                                            match.betResult === 'return'
+                                                                                                ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-yellow-500 hover:to-amber-500 hover:text-white hover:shadow-lg hover:shadow-yellow-500/30'
+                                                                                        }`}
+                                                                                    >
+                                                                                        R
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'lost')}
@@ -804,6 +890,16 @@ export const SavedMatchesPage: React.FC = () => {
                                                                                         }`}
                                                                                     >
                                                                                         W
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleUpdateBetResult(match.id, 'return')}
+                                                                                        className={`px-2 py-1 text-xs rounded-lg transition-all duration-200 hover:scale-105 ${
+                                                                                            match.betResult === 'return'
+                                                                                                ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+                                                                                                : 'bg-slate-700/80 text-slate-300 hover:bg-gradient-to-r hover:from-yellow-500 hover:to-amber-500 hover:text-white hover:shadow-lg hover:shadow-yellow-500/30'
+                                                                                        }`}
+                                                                                    >
+                                                                                        R
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={() => handleUpdateBetResult(match.id, 'lost')}
