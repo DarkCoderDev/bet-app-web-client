@@ -669,7 +669,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                             financialResults[h.column.id] !== undefined && (
                               <div
                                 className={clsx(
-                                  "text-[11px] font-bold rounded-sm text-center",
+                                  "text-[9px] font-bold rounded-sm text-center",
                                   financialResults[h.column.id] > 0
                                     ? "bg-green-500 text-white"
                                     : "bg-red-500 text-white"
