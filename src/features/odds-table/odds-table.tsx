@@ -15,7 +15,12 @@ import {
   FILTER_ORDER,
 } from "entities/match/consts.ts";
 import { signatures } from "entities/filter/signatures.ts";
-import {calculateBetResult, renderClean, getColumnIndex, type BetResult} from "./lib";
+import {
+  calculateBetResult,
+  renderClean,
+  getColumnIndex,
+  type BetResult,
+} from "./lib";
 import { BetManagementService } from "entities/match/bet-management.ts";
 import { Controls } from "features/odds-table/modules/controls";
 import clsx from "clsx";
@@ -115,9 +120,14 @@ const applyPredicates = (
 };
 
 // --- Функция получения результата ставки для ячейки
-const getBetResultForCell = (columnId: string, Match: Match): BetResult | false => {
+const getBetResultForCell = (
+  columnId: string,
+  Match: Match
+): BetResult | false => {
   const scoreStr = String(Match[MatchIndexMap[MatchKeys.SCORE]] || "");
-  const halfStr = String(Match[MatchIndexMap[MatchKeys.FIRST_HALF_SCORE]] || "");
+  const halfStr = String(
+    Match[MatchIndexMap[MatchKeys.FIRST_HALF_SCORE]] || ""
+  );
 
   const scoreMatch = scoreStr.match(/(\d+)-(\d+)/);
   const halfMatch = halfStr.match(/(\d+)-(\d+)/);
@@ -178,7 +188,7 @@ const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
   {
     key: MatchKeys.LEAGUE,
     label: RusMatchKeys[MatchKeys.LEAGUE],
-    widthClass: "w-50",
+    widthClass: "w-43",
   },
   {
     key: MatchKeys.DATE,
@@ -203,65 +213,81 @@ const dataColumns: { key: DataKey; label: string; widthClass: string }[] = [
   {
     key: MatchKeys.TEAMS,
     label: RusMatchKeys[MatchKeys.TEAMS],
-    widthClass: "w-50",
+    widthClass: "w-43",
   },
-  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-11" },
-  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-11" },
-  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-11" },
+  { key: MatchKeys.P1, label: RusMatchKeys[MatchKeys.P1], widthClass: "w-10" },
+  { key: MatchKeys.X, label: RusMatchKeys[MatchKeys.X], widthClass: "w-10" },
+  { key: MatchKeys.P2, label: RusMatchKeys[MatchKeys.P2], widthClass: "w-10" },
   {
     key: MatchKeys.HANDICAP1_0,
     label: RusMatchKeys[MatchKeys.HANDICAP1_0],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.HANDICAP2_0,
     label: RusMatchKeys[MatchKeys.HANDICAP2_0],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.ONE_TO_SCORE,
     label: RusMatchKeys[MatchKeys.ONE_TO_SCORE],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.TWO_TO_SCORE,
     label: RusMatchKeys[MatchKeys.TWO_TO_SCORE],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.OVER2_5,
     label: RusMatchKeys[MatchKeys.OVER2_5],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.UNDER2_5,
     label: RusMatchKeys[MatchKeys.UNDER2_5],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.OVER3,
     label: RusMatchKeys[MatchKeys.OVER3],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.UNDER3,
     label: RusMatchKeys[MatchKeys.UNDER3],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.BTTS_YES,
     label: RusMatchKeys[MatchKeys.BTTS_YES],
-    widthClass: "w-11",
+    widthClass: "w-10",
   },
   {
     key: MatchKeys.BTTS_NO,
     label: RusMatchKeys[MatchKeys.BTTS_NO],
+    widthClass: "w-11",
+  },
+  {
+    key: MatchKeys.MARGIN_1X2,
+    label: RusMatchKeys[MatchKeys.MARGIN_1X2],
     widthClass: "w-12",
   },
-  { key: MatchKeys.MARGIN_1X2, label: RusMatchKeys[MatchKeys.MARGIN_1X2], widthClass: "w-14" },
-  { key: MatchKeys.MARGIN_OU_2_5, label: RusMatchKeys[MatchKeys.MARGIN_OU_2_5], widthClass: "w-16" },
-  { key: MatchKeys.MARGIN_OU_3, label: RusMatchKeys[MatchKeys.MARGIN_OU_3], widthClass: "w-14" },
-  { key: MatchKeys.MARGIN_BTTS, label: RusMatchKeys[MatchKeys.MARGIN_BTTS], widthClass: "w-12" },
+  {
+    key: MatchKeys.MARGIN_OU_2_5,
+    label: RusMatchKeys[MatchKeys.MARGIN_OU_2_5],
+    widthClass: "w-14",
+  },
+  {
+    key: MatchKeys.MARGIN_OU_3,
+    label: RusMatchKeys[MatchKeys.MARGIN_OU_3],
+    widthClass: "w-12",
+  },
+  {
+    key: MatchKeys.MARGIN_BTTS,
+    label: RusMatchKeys[MatchKeys.MARGIN_BTTS],
+    widthClass: "w-12",
+  },
 ];
 
 const columns: ColumnDef<Match, string>[] = [
@@ -277,16 +303,16 @@ const columns: ColumnDef<Match, string>[] = [
     })
   ),
   columnHelper.display({
-    id: "Сигнатуры",
-    header: "Сигнатуры",
+    id: "Сигн",
+    header: "Сигн",
     cell: () => "",
-    meta: { widthClass: "w-20" },
+    meta: { widthClass: "w-15" },
   }),
   columnHelper.display({
-    id: "Действия",
-    header: "Действия",
+    id: "✏️💾",
+    header: "✏️💾",
     cell: () => "",
-    meta: { widthClass: "w-24" },
+    meta: { widthClass: "w-17" },
   }),
 ];
 
@@ -363,7 +389,10 @@ export const OddsTable = React.memo(function OddsTable(props: {
   React.useEffect(() => {
     // Загружаем выделенные матчи из localStorage
     const highlightedMatches = betService.getHighlightedMatches();
-    console.log("Loaded highlighted matches from localStorage:", Array.from(highlightedMatches));
+    console.log(
+      "Loaded highlighted matches from localStorage:",
+      Array.from(highlightedMatches)
+    );
 
     setHighlightedRows(highlightedMatches);
   }, [betService, dataSet]); // Добавляем dataSet как зависимость для обновления при изменении данных
@@ -407,7 +436,8 @@ export const OddsTable = React.memo(function OddsTable(props: {
             );
             if (columnIndex !== -1) {
               const value = String(
-                (match as any)[MatchIndexMap[dataColumns[columnIndex].key]] || ""
+                (match as any)[MatchIndexMap[dataColumns[columnIndex].key]] ||
+                  ""
               );
               clearedInputs[columnHeader] = field.transform(value);
             }
@@ -494,7 +524,6 @@ export const OddsTable = React.memo(function OddsTable(props: {
     });
   };
 
-
   // Применяем кастомную фильтрацию
   const filteredData = React.useMemo(() => {
     return applyPredicates(dataSet, appliedFilters);
@@ -576,7 +605,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
           const result = getBetResultForCell(betType, match);
           switch (result) {
             case "lose":
-              totals[betType] += - 1;
+              totals[betType] += -1;
               break;
             case "win":
               totals[betType] += coef - 1;
@@ -631,17 +660,16 @@ export const OddsTable = React.memo(function OddsTable(props: {
                           ).meta?.widthClass ?? "w-1/12"
                         }`}
                       >
-                        <div className="relative">
-                          <div className="select-none text-blue-300 font-bold mb-1 text-center text-xs">
+                        <div className="relative flex flex-col justify-between h-12">
+                          <div className="select-none text-blue-300 font-bold text-center text-[10px]">
                             {h.column.id}
                           </div>
 
-                          {/* Значение флета над инпутом */}
                           {financialResults &&
                             financialResults[h.column.id] !== undefined && (
                               <div
                                 className={clsx(
-                                  "mb-1 text-xs font-bold rounded-sm text-center",
+                                  "text-[9px] font-bold rounded-sm text-center",
                                   financialResults[h.column.id] > 0
                                     ? "bg-green-500 text-white"
                                     : "bg-red-500 text-white"
@@ -651,15 +679,14 @@ export const OddsTable = React.memo(function OddsTable(props: {
                               </div>
                             )}
 
-                          {/* Поле фильтра только для колонок с данными */}
-                          {h.column.id !== "Сигнатуры" && h.column.id !== "Действия" && (
+                          {h.column.id !== "Сигн" && h.column.id !== "✏️💾" && (
                             <input
                               value={inputs[h.column.id] || ""}
                               onChange={(e) =>
                                 onInputChange(h.column.id, e.target.value)
                               }
                               placeholder={h.column.id}
-                              className="w-full px-1 py-0.5 text-xs bg-slate-700/50 border border-slate-600 rounded outline-none transition-all duration-200 text-white placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
+                              className="w-full px-1 py-0.5 text-[11px] bg-slate-700/50 border border-slate-600 rounded outline-none text-white placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-transparent hover:bg-slate-700 min-w-0"
                               onClick={(e) => e.stopPropagation()}
                             />
                           )}
@@ -700,7 +727,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                       {match.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className={`p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${
+                          className={`text-[11px] p-0.5 text-slate-300 text-xs leading-tight cursor-pointer transition-all duration-200 hover:bg-slate-700/50 hover:text-white group text-center overflow-hidden ${
                             (
                               cell.column.columnDef as {
                                 meta?: { widthClass?: string };
@@ -716,7 +743,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                               if (betResult === "win") {
                                 return "rgba(34, 197, 94, 0.2)";
                               } else if (betResult === "return") {
-                                return "rgba(253, 224, 71, 0.2)"
+                                return "rgba(253, 224, 71, 0.2)";
                               }
                               return "transparent";
                             })(),
@@ -730,7 +757,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                           }}
                           title={renderClean(String(cell.getValue() ?? ""))}
                         >
-                          {cell.column.id === "Сигнатуры" ? (
+                          {cell.column.id === "Сигн" ? (
                             <div className="flex gap-1 justify-center">
                               {signatures.map((signature) => (
                                 <button
@@ -757,7 +784,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                 </button>
                               ))}
                             </div>
-                          ) : cell.column.id === "Действия" ? (
+                          ) : cell.column.id === "✏️💾" ? (
                             <div className="flex gap-1 justify-center">
                               <Button
                                 size="sm"
@@ -765,7 +792,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                 onClick={() => {
                                   handleToggleHighlight(matchId);
                                 }}
-                                className="cursor-pointer"
+                                className="cursor-pointer text-[11px] px-1 py-0.5"
                               >
                                 {isHighlighted ? "✅" : "✏️"}
                               </Button>
@@ -774,7 +801,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
                                 onClick={() => {
                                   handleSaveMatch(match.original);
                                 }}
-                                className="cursor-pointer"
+                                className="cursor-pointer text-[11px] px-1 py-0.5"
                               >
                                 💾
                               </Button>
@@ -792,7 +819,7 @@ export const OddsTable = React.memo(function OddsTable(props: {
 
                                 if (betResult === "win") {
                                   return (
-                                    <span className="text-green-300 font-semibold">
+                                    <span className="text-[11px] text-green-300 font-semibold">
                                       {value}
                                     </span>
                                   );
